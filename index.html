@@ -456,16 +456,93 @@ function colorFor(p) {
   return '#cccccc';
 }
 function hash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967295; }
-const LOOK = {
-  skeletal: { roughness: .62, clearcoat: .1 }, muscular: { roughness: .5, clearcoat: .25, clearcoatRoughness: .5 },
-  integumentary: { roughness: .65, clearcoat: .05 }, default: { roughness: .38, clearcoat: .45, clearcoatRoughness: .35 }
+/* ============ TISSUE SURFACES (procedural, per tissue type) ============ */
+// kind: 1 bone pores · 2 muscle fibres · 3 organ mottle · 4 mucosal folds · 5 lung · 6 fat lobules · 7 skin · 0 smooth
+const TIS = {
+  bone:     { k: 1, f: 240, a: .7, cv: .06, vs: 0, sss: .05, r: .6, cc: .08, ccr: .6 },
+  ligament: { k: 2, f: 420, a: .5, cv: .04, vs: 0, sss: .1, r: .42, cc: .35, ccr: .4 },
+  cartilage:{ k: 3, f: 90, a: .2, cv: .04, vs: 0, sss: .22, r: .3, cc: .55, ccr: .25 },
+  muscle:   { k: 2, f: 380, a: .55, cv: .08, vs: 0, sss: .15, r: .45, cc: .35, ccr: .35 },
+  heart:    { k: 2, f: 300, a: .35, cv: .08, vs: .75, sss: .16, r: .34, cc: .6, ccr: .25 },
+  vessel:   { k: 3, f: 120, a: .15, cv: .04, vs: 0, sss: .18, r: .3, cc: .6, ccr: .22 },
+  organ:    { k: 3, f: 70, a: .3, cv: .1, vs: .55, sss: .18, r: .32, cc: .65, ccr: .2 },
+  gut:      { k: 4, f: 45, a: .45, cv: .08, vs: .55, sss: .22, r: .3, cc: .7, ccr: .18 },
+  mucosa:   { k: 4, f: 110, a: .55, cv: .1, vs: .25, sss: .25, r: .28, cc: .75, ccr: .15 },
+  lung:     { k: 5, f: 150, a: .4, cv: .12, vs: .3, sss: .25, r: .45, cc: .4, ccr: .3 },
+  brain:    { k: 3, f: 110, a: .2, cv: .06, vs: .8, sss: .2, r: .32, cc: .7, ccr: .18 },
+  nerve:    { k: 2, f: 600, a: .35, cv: .05, vs: 0, sss: .16, r: .36, cc: .45, ccr: .3 },
+  fat:      { k: 6, f: 70, a: .45, cv: .08, vs: .2, sss: .28, r: .34, cc: .55, ccr: .22 },
+  skin:     { k: 7, f: 420, a: .3, cv: .06, vs: 0, sss: .28, r: .55, cc: .1, ccr: .5 },
+  glossy:   { k: 0, f: 1, a: 0, cv: 0, vs: 0, sss: .12, r: .18, cc: .9, ccr: .08 },
+  tooth:    { k: 3, f: 160, a: .1, cv: .03, vs: 0, sss: .15, r: .24, cc: .6, ccr: .12 },
+  hair:     { k: 2, f: 1200, a: .5, cv: .12, vs: 0, sss: .05, r: .55, cc: .2, ccr: .5 },
 };
+function tissueFor(sys, org) {
+  const o = org || '';
+  switch (sys) {
+    case 'skeletal': return o === 'ligaments' ? 'ligament' : 'bone';
+    case 'muscular': return 'muscle';
+    case 'cardiovascular': return o === 'heart' ? 'heart' : 'vessel';
+    case 'nervous': return o === 'eye' || o === 'ventricles' ? 'glossy' : /nerve|spinal/.test(o) ? 'nerve' : o === 'ear' ? 'cartilage' : 'brain';
+    case 'respiratory': return o === 'lungs' ? 'lung' : /trachea|bronchi|larynx/.test(o) ? 'cartilage' : o === 'diaphragm' ? 'muscle' : 'mucosa';
+    case 'digestive': return o === 'teeth' ? 'tooth' : /liver|pancreas|gallbladder|salivary/.test(o) ? 'organ' : o === 'mouth' ? 'mucosa' : 'gut';
+    case 'urinary': return o === 'kidneys' ? 'organ' : o === 'bladder' ? 'gut' : 'vessel';
+    case 'integumentary': return o === 'hair' ? 'hair' : 'skin';
+    case 'lymphatic': return o === 'thymus' ? 'fat' : 'organ';
+    case 'reproductive': return o === 'mammary' ? 'fat' : 'organ';
+    case 'endocrine': return 'organ';
+  }
+  return 'organ';
+}
+const TIS_GLSL = `
+varying vec3 vOP;
+float tHash(vec3 p){ p = fract(p * 0.3183099 + .1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float tNoise(vec3 x){ vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(tHash(i), tHash(i + vec3(1,0,0)), f.x), mix(tHash(i + vec3(0,1,0)), tHash(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(tHash(i + vec3(0,0,1)), tHash(i + vec3(1,0,1)), f.x), mix(tHash(i + vec3(0,1,1)), tHash(i + vec3(1,1,1)), f.x), f.y), f.z); }
+float tFbm(vec3 p){ return .55 * tNoise(p) + .3 * tNoise(p * 2.03 + 7.1) + .15 * tNoise(p * 4.1 + 3.7); }
+float tCell(vec3 p){ vec3 i = floor(p), f = fract(p); float d = 1.0; for (int z=-1;z<=1;z++) for (int y=-1;y<=1;y++) for (int x=-1;x<=1;x++){ vec3 g = vec3(x,y,z); vec3 o = vec3(tHash(i+g), tHash(i+g+19.1), tHash(i+g+47.3)); d = min(d, length(g + o - f)); } return d; }
+vec3 tisPerturb(vec3 surf_pos, vec3 surf_norm, vec2 dHdxy, float faceDir){
+  vec3 sx = dFdx(surf_pos), sy = dFdy(surf_pos); vec3 r1 = cross(sy, surf_norm), r2 = cross(surf_norm, sx);
+  float det = dot(sx, r1) * faceDir; vec3 grad = sign(det) * (dHdxy.x * r1 + dHdxy.y * r2); return normalize(abs(det) * surf_norm - grad); }
+`;
+function tisFrag(t) {
+  return `
+  float tH = 0.0, tVes = 0.0; {
+    vec3 P = vOP * ${t.f.toFixed(1)};
+    float fw = length(fwidth(P)); float lod = clamp(1.0 - fw * 1.6, 0.0, 1.0); lod *= lod;
+    float n = tFbm(P * .35);
+    ${t.k === 1 ? 'float pore = 1.0 - smoothstep(.05, .2, tCell(P * .5)); tH = ((n - .5) * .7 - pore * .5) * lod; diffuseColor.rgb *= 1.0 - pore * .06 * lod;' : ''}
+    ${t.k === 2 ? 'float fib = tNoise(vec3(P.x, P.y * .08, P.z)); float fib2 = tNoise(vec3(P.x * 2.1, P.y * .15, P.z * 2.1) + 5.0); tH = ((fib * .7 + fib2 * .3) - .5) * lod + (n - .5) * .3;' : ''}
+    ${t.k === 3 ? 'tH = (n - .5) * lod;' : ''}
+    ${t.k === 4 ? 'float fold = 1.0 - abs(tFbm(P * .5) * 2.0 - 1.0); tH = (pow(fold, 3.0) - .3) * lod + (tNoise(P * 3.0) - .5) * .2 * lod;' : ''}
+    ${t.k === 5 ? 'float al = tCell(P * .9); tH = (al - .5) * lod; diffuseColor.rgb *= 1.0 - .18 * smoothstep(.7, .95, tNoise(P * .6)) * lod;' : ''}
+    ${t.k === 6 ? 'float lob = tCell(P * .6); tH = (lob * .9 - .4) * lod; diffuseColor.rgb *= .92 + .14 * smoothstep(.15, .55, lob);' : ''}
+    ${t.k === 7 ? 'float pore = smoothstep(.72, .9, tNoise(P)); tH = ((n - .5) * .5 - pore * .6) * lod; diffuseColor.rgb *= 1.0 + (tNoise(P * .05) - .5) * .12;' : ''}
+    tH *= ${t.a.toFixed(2)};
+    diffuseColor.rgb *= 1.0 + (tFbm(vOP * ${(t.f * .06).toFixed(2)}) - .5) * ${(t.cv * 2).toFixed(3)};
+    ${t.vs > 0 ? `
+    vec3 Q = vOP * 34.0 + vec3(tFbm(vOP * 12.0), tFbm(vOP * 12.0 + 3.3), tFbm(vOP * 12.0 + 7.7)) * 1.4;
+    float v1 = 1.0 - abs(tNoise(Q) * 2.0 - 1.0), v2 = 1.0 - abs(tNoise(Q * 2.3 + 11.0) * 2.0 - 1.0);
+    float vw = clamp(1.0 - length(fwidth(Q)) * 6.0, 0.0, 1.0);
+    tVes = (pow(v1, 70.0) * smoothstep(.35, .65, tNoise(Q * .23 + 2.0)) + pow(v2, 110.0) * .5) * vw * ${t.vs.toFixed(2)};
+    diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(.62, .3, .38), clamp(tVes, 0.0, .28));` : ''}
+  }`;
+}
 const ALLMATS = [];
 function makeMat(sys, opts = {}) {
-  const l = LOOK[sys] || LOOK.default;
-  const m = new THREE.MeshPhysicalMaterial({ vertexColors: true, metalness: 0, roughness: l.roughness, clearcoat: l.clearcoat, clearcoatRoughness: l.clearcoatRoughness ?? .4, transparent: false, side: opts.double || (state.slice && !opts.cu) ? THREE.DoubleSide : THREE.FrontSide, envMapIntensity: .9 });
-  m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n  if (!gl_FrontFacing) diffuseColor.rgb *= vec3(0.58, 0.42, 0.42);'); };
-  m.userData.double = !!opts.double; if (!opts.cu) ALLMATS.push(m);
+  const tn = opts.tissue || tissueFor(sys, opts.org), t = TIS[tn] || TIS.organ;
+  const m = new THREE.MeshPhysicalMaterial({ vertexColors: true, metalness: 0, roughness: t.r, clearcoat: t.cc, clearcoatRoughness: t.ccr, sheen: t.sss > .2 ? .35 : 0, sheenRoughness: .6, sheenColor: new THREE.Color(1, .55, .5), transparent: false, side: opts.double || (state.slice && !opts.cu) ? THREE.DoubleSide : THREE.FrontSide, envMapIntensity: .9 });
+  m.onBeforeCompile = sh => {
+    sh.vertexShader = 'varying vec3 vOP;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vOP = position;');
+    sh.fragmentShader = TIS_GLSL + sh.fragmentShader
+      .replace('#include <color_fragment>', '#include <color_fragment>\n' + tisFrag(t) + '\n  if (!gl_FrontFacing) diffuseColor.rgb *= vec3(0.58, 0.42, 0.42);')
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>\n  roughnessFactor = clamp(roughnessFactor + tH * .08 - tVes * .05, .05, 1.0);`)
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\n  normal = tisPerturb(-vViewPosition, normal, vec2(dFdx(tH), dFdy(tH)) * .0035, faceDirection);`)
+      .replace('#include <opaque_fragment>', `outgoingLight += diffuseColor.rgb * vec3(1.0, .5, .42) * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 2.2) * ${t.sss.toFixed(2)};\n#include <opaque_fragment>`);
+  };
+  m.customProgramCacheKey = () => 'tis-' + tn;
+  m.userData.double = !!opts.double; m.userData.tissue = tn; if (!opts.cu) ALLMATS.push(m);
   return m;
 }
 
@@ -517,11 +594,11 @@ function buildSystem(s, buf) {
     const geo = mergeParts(parts, buf);
     let mesh;
     if (tpl) {
-      const inst = MAN.nodes; mesh = new THREE.InstancedMesh(geo, makeMat(s), inst.length);
+      const inst = MAN.nodes; mesh = new THREE.InstancedMesh(geo, makeMat(s, { org: orgId }), inst.length);
       const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
       inst.forEach((d, i) => { e.set(d[3], d[4], 0); q.setFromEuler(e); m4.compose(new THREE.Vector3(d[0], d[1], d[2]), q, new THREE.Vector3(d[5], d[5], d[5])); mesh.setMatrixAt(i, m4); });
       mesh.computeBoundingSphere();
-    } else mesh = new THREE.Mesh(geo, makeMat(s, { double: org.id === 'diaphragm' || layer === 'shell' }));
+    } else mesh = new THREE.Mesh(geo, makeMat(s, { org: orgId, double: org.id === 'diaphragm' || layer === 'shell' }));
     mesh.userData = { org, parts, sex: sex || null, layer, baseOpacity: layer === 'shell' ? .42 : orgId === 'lungs' ? .62 : 1 };
     for (const p of parts) p.mesh = mesh;
     org.meshes.push(mesh); scene.add(mesh);
@@ -536,6 +613,7 @@ function mergeParts(parts, buf) {
     const q = new Uint16Array(buf, p.p, p.vc * 3), n = new Int8Array(buf, p.nr, p.vc * 3), ind = p.b ? new Uint32Array(buf, p.i, p.ic) : new Uint16Array(buf, p.i, p.ic);
     for (let k = 0; k < p.vc * 3; k++) pos[vo * 3 + k] = mn[k % 3] + q[k] / 65535 * sp[k % 3];
     nrm.set(n, vo * 3);
+    if (p.src === 'hra') { const e = .00035 * (1 + (parts.indexOf(p) % 6)); for (let k = 0; k < p.vc * 3; k++) pos[vo * 3 + k] += n[k] / 127 * e; }
     c.set(colorFor(p)); const j = 0.9 + hash(p.n) * 0.2; const r = Math.min(255, c.r * j * 255), g = Math.min(255, c.g * j * 255), b = Math.min(255, c.b * j * 255);
     for (let k = 0; k < p.vc; k++) { col[(vo + k) * 3] = r; col[(vo + k) * 3 + 1] = g; col[(vo + k) * 3 + 2] = b; }
     for (let k = 0; k < p.ic; k++) idx[io + k] = ind[k] + vo;
@@ -554,7 +632,7 @@ function buildShares() {
     if (!o.share || o.meshes.length) continue;
     const src = ORG[o.share]; if (!src || !src.meshes.length) continue;
     for (const m of src.meshes) {
-      const mat = makeMat('endocrine'); mat.vertexColors = false; mat.color.set('#a98ad8');
+      const mat = makeMat('endocrine', { org: o.id }); mat.vertexColors = false; mat.color.set('#a98ad8');
       const mm = new THREE.Mesh(m.geometry, mat); mm.userData = { ...m.userData, org: o, baseOpacity: 1 };
       o.meshes.push(mm); scene.add(mm);
     }
@@ -566,7 +644,7 @@ function procMesh(org, geo, color, name, { pos, scale, rot, sex, opts } = {}) {
   const c = new THREE.Color(color); const n = geo.attributes.position.count; const col = new Uint8Array(n * 3);
   for (let i = 0; i < n; i++) { col[i * 3] = c.r * 255; col[i * 3 + 1] = c.g * 255; col[i * 3 + 2] = c.b * 255; }
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3, true));
-  const m = new THREE.Mesh(geo, makeMat(org.sys, opts)); if (pos) m.position.set(...pos); if (scale) m.scale.set(...scale); if (rot) m.rotation.set(...rot);
+  const m = new THREE.Mesh(geo, makeMat(org.sys, { org: org.id, ...(opts || {}) })); if (pos) m.position.set(...pos); if (scale) m.scale.set(...scale); if (rot) m.rotation.set(...rot);
   const part = { n: name, s: org.sys, org: org.id, start: 0, count: geo.index.count, x: sex || null, proc: true };
   m.userData = { org, parts: [part], sex: sex || null, baseOpacity: 1 }; org.meshes.push(m); org.proc = true; scene.add(m); return m;
 }
@@ -684,11 +762,30 @@ function resetView() { if (LU.on) { state.sel = null; state.selOrg = null; state
 
 /* ============ HIGHLIGHT & HIDE ============ */
 let hl = null;
-const hlMat = new THREE.MeshStandardMaterial({ color: 0x9fe6ff, emissive: 0x1fa8ff, emissiveIntensity: .9, transparent: true, opacity: .62, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+const hlU = { uA: { value: 1 }, uC: { value: new THREE.Color(0x6fd2ff) } };
+const hlMat = new THREE.ShaderMaterial({ uniforms: hlU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+  vertexShader: `#include <common>
+#include <clipping_planes_pars_vertex>
+varying vec3 vN; varying vec3 vV;
+void main(){ vec3 transformed = position;
+ #ifdef USE_INSTANCING
+ vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(transformed,1.0); vN = normalize(normalMatrix * mat3(instanceMatrix) * normal);
+ #else
+ vec4 mvPosition = modelViewMatrix * vec4(transformed,1.0); vN = normalize(normalMatrix * normal);
+ #endif
+ vV = -mvPosition.xyz; gl_Position = projectionMatrix * mvPosition;
+#include <clipping_planes_vertex>
+}`,
+  fragmentShader: `#include <clipping_planes_pars_fragment>
+uniform float uA; uniform vec3 uC; varying vec3 vN; varying vec3 vV;
+void main(){
+#include <clipping_planes_fragment>
+ float f = 1.0 - abs(dot(normalize(vN), normalize(vV))); float rim = pow(f, 2.6); gl_FragColor = vec4(uC * (rim * 1.25 + .05) * uA, 1.0); }` });
+hlMat.clipping = true;
 const olTh = { value: .002 };
 const olMat = new THREE.MeshBasicMaterial({ color: 0xffd23f, side: THREE.BackSide, transparent: true, opacity: .95, depthWrite: false });
 olMat.onBeforeCompile = sh => { sh.uniforms.th = olTh; sh.vertexShader = 'uniform float th;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed += normalize(normal) * th;'); };
-const ghostHl = new THREE.MeshBasicMaterial({ color: 0x5fd0ff, transparent: true, opacity: .28, depthTest: false, depthWrite: false });
+const ghostHl = new THREE.MeshBasicMaterial({ color: 0x5fd0ff, transparent: true, opacity: .14, depthTest: false, depthWrite: false });
 function partGeo(p, withColor) {
   const src = p.mesh.geometry; const g = new THREE.BufferGeometry();
   g.setAttribute('position', src.attributes.position); g.setAttribute('normal', src.attributes.normal); if (withColor && src.attributes.color) g.setAttribute('color', src.attributes.color);
@@ -703,7 +800,6 @@ function setHighlight(p) {
   const size = g.boundingSphere.radius; olTh.value = Math.min(.004, Math.max(.0009, size * .045));
   const mk = mat => { let m; if (p.mesh.isInstancedMesh) { m = new THREE.InstancedMesh(g, mat, p.mesh.count); for (let i = 0; i < p.mesh.count; i++) { const m4 = new THREE.Matrix4(); p.mesh.getMatrixAt(i, m4); m.setMatrixAt(i, m4); } } else m = new THREE.Mesh(g, mat); return m; };
   const fill = mk(hlMat); fill.renderOrder = 5; const ghostM = mk(ghostHl); ghostM.renderOrder = 7; hl.add(fill, ghostM);
-  if (!p.mesh.isInstancedMesh) { const ol = mk(olMat); ol.renderOrder = 6; hl.add(ol); }
   hl.position.copy(p.mesh.position); hl.rotation.copy(p.mesh.rotation); hl.scale.copy(p.mesh.scale);
   scene.add(hl);
 }
@@ -1187,22 +1283,22 @@ function initCU() {
   document.getElementById('cu').addEventListener('pointerdown', e => { if (e.target.id === 'cu') closeCloseup(); });
   addEventListener('keydown', e => { if (e.key === 'Escape' && CU.open) closeCloseup(); });
 }
-function cuMat(sys) { const m = makeMat(sys, { cu: true }); m.side = CU.slice.on ? THREE.DoubleSide : THREE.FrontSide; return m; }
+function cuMat(sys, org) { const m = makeMat(sys, { cu: true, org }); m.side = CU.slice.on ? THREE.DoubleSide : THREE.FrontSide; return m; }
 function buildCU() {
   for (const c of [...CU.inner.children]) { CU.inner.remove(c); if (c.userData.own) c.geometry.dispose(); }
   CU.hl = null; CU.caps.clear(); const org = CU.org, p = CU.p;
   if (CU.mode === 'part' && p.mesh) {
     const g = partGeo(p, true); let m;
-    if (p.mesh.isInstancedMesh) { m = new THREE.Mesh(g, cuMat(org.sys)); }
-    else { m = new THREE.Mesh(g, cuMat(org.sys)); m.position.copy(p.mesh.position); m.rotation.copy(p.mesh.rotation); m.scale.copy(p.mesh.scale); }
+    if (p.mesh.isInstancedMesh) { m = new THREE.Mesh(g, cuMat(org.sys, org.id)); }
+    else { m = new THREE.Mesh(g, cuMat(org.sys, org.id)); m.position.copy(p.mesh.position); m.rotation.copy(p.mesh.rotation); m.scale.copy(p.mesh.scale); }
     m.userData = { own: true, single: p, org }; CU.inner.add(m);
   } else {
     const BRAIN = ['cerebrum', 'corpus_callosum', 'limbic', 'basal_nuclei', 'thalamus', 'hypothalamus', 'ventricles', 'cerebellum', 'brainstem'];
     const group = BRAIN.includes(org.id) ? BRAIN.map(id => ORG[id]).filter(Boolean) : [org];
     for (const sm of group.flatMap(g => g.meshes)) {
       if (!sexOk(sm.userData.sex)) continue; let m;
-      if (sm.isInstancedMesh) { m = new THREE.InstancedMesh(sm.geometry, cuMat(org.sys), sm.count); for (let i = 0; i < sm.count; i++) { const m4 = new THREE.Matrix4(); sm.getMatrixAt(i, m4); m.setMatrixAt(i, m4); } }
-      else { m = new THREE.Mesh(sm.geometry, cuMat(org.sys)); m.position.copy(sm.position); m.rotation.copy(sm.rotation); m.scale.copy(sm.scale); }
+      if (sm.isInstancedMesh) { m = new THREE.InstancedMesh(sm.geometry, cuMat(org.sys, org.id), sm.count); for (let i = 0; i < sm.count; i++) { const m4 = new THREE.Matrix4(); sm.getMatrixAt(i, m4); m.setMatrixAt(i, m4); } }
+      else { m = new THREE.Mesh(sm.geometry, cuMat(org.sys, org.id)); m.position.copy(sm.position); m.rotation.copy(sm.rotation); m.scale.copy(sm.scale); }
       if (sm.userData.layer === 'shell') { m.material.transparent = true; m.material.opacity = .45; m.material.depthWrite = false; }
       m.userData = { parts: sm.userData.parts, org: sm.userData.org, srcMesh: sm }; CU.inner.add(m);
     }
@@ -1341,7 +1437,7 @@ function compactPart(p, mesh) {
   const c = g.boundingBox.getCenter(new THREE.Vector3()), size = g.boundingBox.getSize(new THREE.Vector3()); g.translate(-c.x, -c.y, -c.z); g.computeBoundingBox(); g.computeBoundingSphere();
   return { g, c, size };
 }
-function luMats(sys) { if (!LU.mats[sys]) { const a = makeMat(sys), d = makeMat(sys); d.transparent = true; d.opacity = .16; d.depthWrite = false; LU.mats[sys] = { a, d }; } return LU.mats[sys]; }
+function luMats(sys, org) { const k = tissueFor(sys, org); if (!LU.mats[k]) { const a = makeMat(sys, { org }), d = makeMat(sys, { org }); d.transparent = true; d.opacity = .16; d.depthWrite = false; LU.mats[k] = { a, d }; } return LU.mats[k]; }
 function luClear() { for (const pc of LU.pieces) { scene.remove(pc.mesh); pc.mesh.geometry.dispose(); } LU.pieces = []; LU.byPart = new Map(); LU.groups = []; document.getElementById('luLbl').innerHTML = ''; }
 function luBuild() {
   liftRemove();
@@ -1349,7 +1445,7 @@ function luBuild() {
   for (const o of Object.values(ORG)) {
     if (!inFocus(o) || o.sys !== sys && !(sys === 'integumentary' && o.inset)) continue; const items = [];
     for (const m of o.meshes) { if (m.isInstancedMesh || !sexOk(m.userData.sex) || m.userData.layer === 'shell') continue;
-      for (const p of m.userData.parts) { if (!sexOk(p.x) || hiddenParts.has(p) || !p.count) continue; const cp = compactPart(p, m); if (cp.size.length() < 1e-5) continue; items.push({ p, org: o, ...cp, sys: m.userData.org.sys }); } }
+      for (const p of m.userData.parts) { if (!sexOk(p.x) || hiddenParts.has(p) || !p.count) continue; const cp = compactPart(p, m); if (cp.size.length() < 1e-5) continue; items.push({ p, org: o, ...cp, sys: m.userData.org.sys, morg: m.userData.org.id }); } }
     if (items.length) groups.push({ org: o, items });
   }
   groups.sort((a, b) => (a.org.other ? 1 : 0) - (b.org.other ? 1 : 0));
@@ -1377,7 +1473,7 @@ function luBuild() {
     g.lw = new THREE.Vector3(ox + g.x, oy - g.y - lab * .45, 0);
     const d = document.createElement('div'); d.className = 'lbl lulbl'; d.textContent = g.org.name + (g.items.length > 1 ? ` · ${g.items.length}` : ''); d.onclick = () => selectOrgan(g.org); lblEl.appendChild(d); g.el = d;
     for (const i of g.items) {
-      const to = new THREE.Vector3(ox + g.x + i.bx, oy - g.y - lab - i.by, 0); const mats = luMats(i.sys);
+      const to = new THREE.Vector3(ox + g.x + i.bx, oy - g.y - lab - i.by, 0); const mats = luMats(i.sys, i.morg);
       const mesh = new THREE.Mesh(i.g, mats.a); mesh.position.copy(i.c); scene.add(mesh);
       const pc = { p: i.p, org: g.org, mesh, from: i.c.clone(), to, mats, delay: (n++ / N) * spread, group: g }; mesh.userData.piece = pc;
       LU.pieces.push(pc); LU.byPart.set(i.p, pc); box.expandByPoint(to.clone().addScaledVector(i.size, .5)).expandByPoint(to.clone().addScaledVector(i.size, -.5));
@@ -1466,18 +1562,20 @@ document.getElementById('luBack').onclick = () => luExit();
 document.getElementById('tLineup').onclick = () => luEnter();
 
 /* ============ LIFT (selected part pops out, big) ============ */
+const liftScene = new THREE.Scene(); liftScene.environment = scene.environment;
+liftScene.add(key.clone(), rim.clone(), new THREE.HemisphereLight(0xffffff, 0x223355, 0.35));
 const LIFT = { mesh: null, glow: null, p: null, org: null, t0: 0, dir: 1, from: new THREE.Vector3(), fromS: 1, center: new THREE.Vector3(), box: new THREE.Box3(), r0: 1, spin: 0 };
 const glowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(120,180,255,.55)'); gr.addColorStop(.45, 'rgba(70,120,230,.22)'); gr.addColorStop(1, 'rgba(40,70,160,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
-function liftRemove() { if (LIFT.mesh) { scene.remove(LIFT.mesh, LIFT.glow); if (LIFT.own) LIFT.mesh.geometry.dispose(); } LIFT.mesh = null; LIFT.glow = null; LIFT.p = null; }
+function liftRemove() { if (LIFT.mesh) { liftScene.remove(LIFT.mesh, LIFT.glow); if (LIFT.own) LIFT.mesh.geometry.dispose(); } LIFT.mesh = null; LIFT.glow = null; LIFT.p = null; }
 function liftStart(p, org, src) {
   liftRemove(); if (state.slice || !src) return false;
   let geo, from, own = false;
   if (src.userData.piece) { geo = src.geometry; from = src.position.clone(); }
   else { if (src.isInstancedMesh) return false; const cp = compactPart(p, src); geo = cp.g; from = cp.c; own = true; }
   if (!geo.boundingSphere) geo.computeBoundingSphere();
-  const mat = makeMat(org.sys); const m = new THREE.Mesh(geo, mat); m.renderOrder = 9; m.position.copy(from); m.userData.lift = true;
+  const mat = makeMat(org.sys, { org: (src.userData.org || org).id }); const m = new THREE.Mesh(geo, mat); m.renderOrder = 9; m.position.copy(from); m.userData.lift = true;
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, depthTest: false, opacity: 0 })); glow.renderOrder = 8;
-  scene.add(glow, m);
+  liftScene.add(glow, m);
   Object.assign(LIFT, { mesh: m, glow, p, org, own, t0: performance.now(), dir: 1, from, r0: Math.max(geo.boundingSphere.radius, 1e-4), spin: 0 });
   liftPose(); state.anchorW = LIFT.center; state.selBox = LIFT.box; return true;
 }
@@ -1545,9 +1643,9 @@ function loop(now) {
   requestAnimationFrame(loop);
   if (tween) { const t = Math.min(1, (now - tween.t0) / tween.dur), k = ease(t); camera.position.lerpVectors(tween.fromP, tween.toP, k); controls.target.lerpVectors(tween.fromT, tween.toT, k); if (t >= 1) { tween = null; if (pop.classList.contains('show')) placePop(false); } }
   const dt = Math.min(.05, (now - lastT) / 1000); lastT = now; stepFades(dt);
-  const pulse = .5 + .5 * Math.sin(now / 200); hlMat.emissiveIntensity = .5 + .7 * pulse; hlMat.opacity = (LIFT.mesh ? .2 : .45) + (LIFT.mesh ? .15 : .3) * pulse; olMat.opacity = .7 + .3 * pulse;
+  const pulse = .5 + .5 * Math.sin(now / 200); hlU.uA.value = (LIFT.mesh ? .45 : .75) + .45 * pulse;
   if (CU.open) { CU.ctl.update(); CU.r.render(CU.scene, CU.cam); return; }
-  luTick(now); liftTick(now, dt); luHover(); controls.update(); renderer.render(scene, camera); updateLabels(); luLabels(); updateLeader(now);
+  luTick(now); liftTick(now, dt); luHover(); controls.update(); renderer.render(scene, camera); if (LIFT.mesh) { const cp = renderer.clippingPlanes; renderer.clippingPlanes = []; renderer.autoClear = false; renderer.clearDepth(); renderer.render(liftScene, camera); renderer.autoClear = true; renderer.clippingPlanes = cp; } updateLabels(); luLabels(); updateLeader(now);
 }
 requestAnimationFrame(loop);
 window.__A = { ORG, ensureSys, scene, camera, controls, renderer, boxOf, flyToBox, refresh, state };
