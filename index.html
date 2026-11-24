@@ -32,8 +32,9 @@ button{cursor:default;border:0;background:none;-webkit-user-select:none;user-sel
   background:linear-gradient(rgba(58,58,64,.55),rgba(44,44,50,.55));-webkit-user-select:none;user-select:none;position:relative;z-index:8}
 .lights{display:flex;gap:8px;margin-right:6px}
 .lights button{width:12px;height:12px;border-radius:50%;position:relative;box-shadow:0 0 0 .5px rgba(0,0,0,.35) inset;display:grid;place-items:center;font-size:9px;line-height:1;color:transparent;font-weight:900}
-.lights .r{background:#ff5f57}.lights .y{background:#febc2e}.lights .g{background:#28c840}
-.lights:hover .r{color:#4d0000}.lights:hover .y{color:#5a3a00}.lights:hover .g{color:#003a00}
+.lights .r{background:linear-gradient(160deg,#f06a7e,#c8304a)}.lights .y{background:linear-gradient(160deg,#8fa3c7,#5a6d92)}.lights .g{background:linear-gradient(160deg,#4aa8ff,#0a6fd6)}
+.lights button{box-shadow:0 0 0 .5px rgba(255,255,255,.18) inset,0 1px 3px rgba(0,0,0,.35)}
+.lights:hover button{color:rgba(255,255,255,.92)}
 .appname{display:flex;align-items:center;gap:9px;font-weight:700;font-size:13.5px;letter-spacing:-.1px}
 .appname img{width:24px;height:24px;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
 .appname small{font-weight:500;color:var(--text2);font-size:12px}
@@ -82,10 +83,12 @@ img.ico{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shad
 .dot.img{background:linear-gradient(160deg,#3a4a70,#151d33);box-shadow:0 0 0 .5px rgba(255,255,255,.18) inset,0 2px 6px rgba(0,0,0,.4);padding:3px}
 
 /* ===== popover ===== */
-#pop{position:absolute;z-index:5;width:300px;background:rgba(36,36,40,.78);backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);border-radius:14px;
+#pop{position:absolute;z-index:5;width:300px;background:rgba(22,26,38,.42);backdrop-filter:blur(3px) saturate(140%);-webkit-backdrop-filter:blur(3px) saturate(140%);text-shadow:0 1px 3px rgba(0,0,0,.65);border-radius:14px;
   box-shadow:0 0 0 .5px rgba(255,255,255,.17) inset,0 0 0 .5px rgba(0,0,0,.6),0 22px 60px rgba(0,0,0,.5);display:none;overflow:hidden;opacity:0;transform:scale(.92) translateY(6px);transition:opacity .22s var(--ease),transform .38s var(--spring)}
 #pop.show{opacity:1;transform:none}
-#pop.glide{transition:opacity .22s var(--ease),transform .38s var(--spring),left .55s var(--ease),top .55s var(--ease)}
+#pop:hover{background:rgba(26,30,42,.9);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%)}
+#pop{transition:background .25s var(--ease)}
+#pop.glide{transition:background .25s var(--ease),opacity .22s var(--ease),transform .38s var(--spring),left .55s var(--ease),top .55s var(--ease)}
 #leader{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;overflow:visible;opacity:0;transition:opacity .3s var(--ease)}
 #leader.on{opacity:1}
 #leader .ln{fill:none;stroke:#ffd23f;stroke-width:2;stroke-linecap:round;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
@@ -246,6 +249,20 @@ body.intro #loader{display:none!important}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media (max-width:900px){body.intro .win{transform:none}.ilogo{width:104px;height:104px}.iglow{width:104px;height:104px;margin:-52px 0 0 -52px;top:52px}}
 
+
+/* ===== line-up ===== */
+#luLbl{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+.lulbl{overflow:hidden;text-overflow:ellipsis;font-size:12px;padding:3px 9px;background:rgba(20,22,30,.6);animation:none}
+.lulbl.on{background:var(--accent);color:#fff}
+#luTip{position:absolute;left:0;top:0;pointer-events:none;z-index:6;display:none;background:rgba(20,20,24,.88);color:#fff;font-size:12px;font-weight:600;padding:4px 9px;border-radius:7px;white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+#luBar{position:absolute;left:50%;top:14px;z-index:4;display:flex;align-items:center;gap:10px;padding:7px 8px 7px 13px;border-radius:14px;transform:translate(-50%,-12px) scale(.96);opacity:0;pointer-events:none;transition:opacity .35s var(--ease),transform .45s var(--spring)}
+#luBar.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#luBar>svg{width:20px;height:20px;stroke:var(--accent);fill:none;stroke-width:1.8}
+#luBar b{display:block;font-size:13px}#luBar small{display:block;font-size:11px;color:var(--text2,#aaa)}
+#luBar button{background:var(--accent);color:#fff;font-size:12px;font-weight:600;padding:6px 11px;border-radius:9px;transition:transform .2s var(--spring)}
+#luBar button:active{transform:scale(.94)}
+#toast{position:absolute;left:50%;top:64px;z-index:8;padding:9px 14px;border-radius:12px;font-size:13px;transform:translate(-50%,-8px);opacity:0;pointer-events:none;transition:opacity .3s var(--ease),transform .4s var(--spring);max-width:80%;text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
 /* ===== move pad ===== */
 #stage{container-type:inline-size}
 #pad{position:absolute;left:14px;bottom:14px;z-index:4;display:grid;grid-template-columns:repeat(3,32px);grid-template-rows:repeat(3,32px);gap:3px;padding:6px;border-radius:16px}
@@ -322,6 +339,7 @@ body.intro #loader{display:none!important}
     <div class="tools glass">
       <button class="tool" id="tReset"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span>Reset view</span></button>
       <button class="tool" id="tRotate"><svg viewBox="0 0 24 24"><path d="M20.5 13a8.5 8.5 0 0 1-15 4.5"/><path d="M3.5 11a8.5 8.5 0 0 1 15-4.5"/><path d="M19 2.5V7h-4.5"/><path d="M5 21.5V17h4.5"/></svg><span>Auto-rotate</span></button>
+      <button class="tool" id="tLineup"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="4" height="7" rx="1.2"/><rect x="10" y="4" width="4" height="10" rx="1.2"/><rect x="17" y="4" width="4" height="5" rx="1.2"/><rect x="3" y="15" width="7" height="5" rx="1.2"/><rect x="13" y="17" width="8" height="3" rx="1.2"/></svg><span>Line up all parts (take apart)</span></button>
       <button class="tool" id="tXray"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" stroke-dasharray="3 2.6"/><circle cx="12" cy="12" r="3.4"/></svg><span>X-ray (see through)</span></button>
       <button class="tool" id="tSlice"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg><span>Slice: cut open to see inside</span></button>
       <button class="tool" id="tLabels"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg><span>Organ labels</span></button>
@@ -335,6 +353,8 @@ body.intro #loader{display:none!important}
       <button data-m="left" title="Move left"><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></button><button data-m="center" title="Re-center"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></button><button data-m="right" title="Move right"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
       <span></span><button data-m="down" title="Move down"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button><span></span>
     </div>
+    <div id="luLbl"></div><div id="luTip"></div><div id="toast" class="glass"></div>
+    <div id="luBar" class="glass"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="4" height="7" rx="1.2"/><rect x="10" y="4" width="4" height="10" rx="1.2"/><rect x="17" y="4" width="4" height="5" rx="1.2"/><rect x="3" y="15" width="7" height="5" rx="1.2"/><rect x="13" y="17" width="8" height="3" rx="1.2"/></svg><div><b>Line-up view</b><small id="luN"></small></div><button id="luBack">Back to body</button></div>
     <div class="hint glass" id="hint">Drag to rotate · Shift + drag or arrow keys to move · Scroll or pinch to zoom · Tap any part</div>
     <div id="loader" class="glass"><div class="row"><i class="spin"></i><span id="loadTxt">Loading…</span></div><div class="bar"><i id="loadBar"></i></div></div>
     <svg id="leader"><path class="ln"/><circle class="rg" r="6"/><circle class="dt" r="4.5"/><circle class="tip" r="3"/></svg>
@@ -383,12 +403,13 @@ const key = new THREE.DirectionalLight(0xffffff, 1.4); key.position.set(2, 4, 3)
 const rim = new THREE.DirectionalLight(0xa8c0ff, 0.6); rim.position.set(-3, 2, -3); scene.add(rim);
 scene.add(new THREE.HemisphereLight(0xffffff, 0x223355, 0.35));
 { const f = new THREE.Mesh(new THREE.CircleGeometry(0.55, 64), new THREE.MeshBasicMaterial({ color: 0x3a5890, transparent: true, opacity: .2 })); f.rotation.x = -Math.PI / 2; f.position.y = -0.002; scene.add(f);
-  const r = new THREE.Mesh(new THREE.RingGeometry(0.54, 0.555, 64), new THREE.MeshBasicMaterial({ color: 0x7f9fd9, transparent: true, opacity: .4 })); r.rotation.x = -Math.PI / 2; r.position.y = -0.001; scene.add(r); }
+  const r = new THREE.Mesh(new THREE.RingGeometry(0.54, 0.555, 64), new THREE.MeshBasicMaterial({ color: 0x7f9fd9, transparent: true, opacity: .4 })); r.rotation.x = -Math.PI / 2; r.position.y = -0.001; scene.add(r); window.__floor = [f, r]; }
 
 /* ============ STATE ============ */
 const state = { spot: true, slice: null, sys: 'all', sex: 'm', sel: null, selOrg: null, labels: false, skin: true, ghost: false, xray: false, isolate: false, rotate: false, quiz: null, search: '' };
 let MAN = null; const ORG = {}; const PARTS = []; const loaded = {}; const loading = {};
 const sexOk = x => !x || x === state.sex;
+const LU = { on: false, exiting: false, pieces: [], byPart: new Map(), groups: [], mats: {}, t0: 0, done: 0, dir: 1, dur: 950 };
 
 /* ============ COLORS ============ */
 function colorFor(p) {
@@ -627,12 +648,13 @@ function refresh() {
       else if (f && state.xray && !(state.isolate && o === state.selOrg)) op = Math.min(op, o.sys === 'skeletal' ? .35 : .3);
       if (f && state.sys === 'all' && o.sys === 'muscular' && !state.isolate) op = Math.min(op, .35);
       if (f && state.selOrg && state.spot && !state.isolate && o !== state.selOrg) op = Math.min(op, .16);
-      m.userData.pickable = vis && f; m.userData.tOp = vis ? op : 0;
+      if (LU.on) vis = false; m.userData.pickable = vis && f; m.userData.tOp = vis ? op : 0;
       if (m.userData.cOp === undefined) { m.userData.cOp = 0; }
       if (vis && !m.visible) { m.visible = true; applyOp(m); }
     }
   }
-  if (hl) hl.visible = !!(state.sel && state.sel.mesh && state.sel.mesh.visible);
+  if (hl) hl.visible = LU.on ? !!state.sel : !!(state.sel && state.sel.mesh && state.sel.mesh.visible);
+  if (LU.on) luStyle();
   const b = document.getElementById('badge'); const s = state.sys === 'all' ? { name: 'All systems', color: '#fff' } : SYS[state.sys];
   document.getElementById('badgeIco').src = 'icons/' + state.sys + '.png'; b.querySelector('span').textContent = s.name + (state.sys === 'all' ? '' : ' system');
   document.getElementById('tIsolate').style.display = state.selOrg ? 'grid' : 'none';
@@ -650,14 +672,15 @@ function flyToBox(box, pad = 1.2) {
   const dir = camera.position.clone().sub(controls.target).normalize();
   tween = { t0: performance.now(), dur: 1000, fromP: camera.position.clone(), fromT: controls.target.clone(), toT: sph.center.clone(), toP: sph.center.clone().addScaledVector(dir, dist) };
 }
-function boxOf(list) { const b = new THREE.Box3(); for (const o of list) for (const m of o.meshes) if (m.visible && (m.userData.tOp ?? 1) > 0 && sexOk(m.userData.sex)) { m.updateMatrixWorld(); if (m.isInstancedMesh) { if (!m.boundingBox) m.computeBoundingBox(); b.union(m.boundingBox); continue; } if (!m.geometry.boundingBox) m.geometry.computeBoundingBox(); b.union(m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld)); } return b; }
+function boxOf(list) { if (LU.on) return luBoxOf(list); const b = new THREE.Box3(); for (const o of list) for (const m of o.meshes) if (m.visible && (m.userData.tOp ?? 1) > 0 && sexOk(m.userData.sex)) { m.updateMatrixWorld(); if (m.isInstancedMesh) { if (!m.boundingBox) m.computeBoundingBox(); b.union(m.boundingBox); continue; } if (!m.geometry.boundingBox) m.geometry.computeBoundingBox(); b.union(m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld)); } return b; }
 function partBox(p) { const g = p.mesh.geometry, pos = g.attributes.position, idx = g.index.array, b = new THREE.Box3(), v = new THREE.Vector3(); for (let i = p.start; i < p.start + p.count; i++) { v.fromBufferAttribute(pos, idx[i]); b.expandByPoint(v); } return b.applyMatrix4(p.mesh.matrixWorld); }
 function frameCurrent() {
+  if (LU.on) return state.selOrg ? flyToBox(boxOf([state.selOrg]), 1.25) : luFly(LU.box);
   if (state.selOrg) return flyToBox(boxOf([state.selOrg]), 1.4);
   const list = Object.values(ORG).filter(o => inFocus(o) && o.meshes.length);
   const b = boxOf(list); if (state.sys === 'all' || b.isEmpty()) { flyToBox(new THREE.Box3(new THREE.Vector3(-.3, 0, -.15), new THREE.Vector3(.3, 1.75, .15)), 1.0); } else flyToBox(b, 1.15);
 }
-function resetView() { const d = camera.position.distanceTo(controls.target); camera.position.copy(controls.target).add(new THREE.Vector3(.25, .1, 1).normalize().multiplyScalar(d)); frameCurrent(); }
+function resetView() { if (LU.on) { state.sel = null; state.selOrg = null; state.isolate = false; setHighlight(null); closePop(false); refresh(); renderPanel(); return luFly(LU.box); } const d = camera.position.distanceTo(controls.target); camera.position.copy(controls.target).add(new THREE.Vector3(.25, .1, 1).normalize().multiplyScalar(d)); frameCurrent(); }
 
 /* ============ HIGHLIGHT & HIDE ============ */
 let hl = null;
@@ -698,6 +721,11 @@ renderer.domElement.addEventListener('pointerup', e => {
   if (!down) return; const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y); down = null; if (moved > 7) return;
   const r = renderer.domElement.getBoundingClientRect(); ptr.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
   ray.setFromCamera(ptr, camera);
+  if (LU.on) { const h = ray.intersectObjects(LU.pieces.filter(pc => pc.mesh.visible).map(pc => pc.mesh), false)[0]; const pc = h && h.object.userData.piece;
+    if (state.quiz && state.quiz.q && state.quiz.q.type === 'tap' && !state.quiz.answered) { if (pc) answerTap(pc.org); return; }
+    if (!pc) return closePop(true); const dbl = lastTap && lastTap.p === pc.p && performance.now() - lastTap.t < 420; lastTap = { p: pc.p, t: performance.now() }; if (dbl) { openCloseup(pc.p, pc.org, 'part'); return; }
+    return luSelect(pc, { x: e.clientX - r.left, y: e.clientY - r.top, w: h.point.clone() }); }
+  if (LU.exiting) return;
   const cands = []; for (const o of Object.values(ORG)) for (const m of o.meshes) if (m.visible && m.userData.pickable) cands.push(m);
   const hits = ray.intersectObjects(cands, false).filter(h => h.material === undefined || true);
   let hit = null;
@@ -801,6 +829,7 @@ function closePop(deselect) { leader.classList.remove('on'); pop.classList.remov
 
 /* ============ SELECTION ============ */
 function selectPart(p, org, at, fly = false) {
+  if (LU.on) { const pc = LU.byPart.get(p); if (pc) return luSelect(pc, at, fly); }
   if (!inFocus(org)) { state.sys = org.inset ? 'integumentary' : org.sys; renderNav(); }
   state.sel = p; state.selOrg = org; if (state.quiz) state.quiz = null;
   state.selBox = p.mesh && !p.mesh.isInstancedMesh ? partBox(p) : null;
@@ -822,7 +851,9 @@ async function selectSystem(id) {
   bounceId = id; setTimeout(() => { bounceId = null; }, 700); state.sys = id; state.sel = null; state.selOrg = null; state.isolate = false; setHighlight(null); closePop(false);
   if (state.quiz) state.quiz.scope = id;
   renderNav(); refresh(); state.quiz ? nextQ() : renderPanel();
+  if (LU.on && id === 'all') luExit(true);
   await ensureSys(id === 'all' ? 'all' : id); if (state.skin) ensureSys('integumentary');
+  if (state.sys === id && LU.on) { if (luBuild()) { refresh(); luStyle(); luFly(LU.box); } else luExit(true); return; }
   if (state.sys === id) { refresh(); frameCurrent(); if (state.slice) applySlice(true); }
 }
 
@@ -834,7 +865,7 @@ function updateLabels() {
   const w = stage.clientWidth, h = stage.clientHeight; const tapQ = state.quiz && state.quiz.q && state.quiz.q.type === 'tap' && !state.quiz.answered;
   const lorder = Object.values(ORG); if (state.selOrg) { lorder.splice(lorder.indexOf(state.selOrg), 1); lorder.unshift(state.selOrg); }
   for (const o of lorder) { if (!o.lbl) continue;
-    const show = state.labels && !tapQ && !o.other && inFocus(o) && o.meshes.some(m => m.visible && sexOk(m.userData.sex)) && (state.sys !== 'all') && (!state.isolate || o === state.selOrg);
+    const show = !LU.on && state.labels && !tapQ && !o.other && inFocus(o) && o.meshes.some(m => m.visible && sexOk(m.userData.sex)) && (state.sys !== 'all') && (!state.isolate || o === state.selOrg);
     if (!show) { o.lbl.style.display = 'none'; continue; }
     tmpV.copy(o.anchor).project(camera); if (tmpV.z > 1) { o.lbl.style.display = 'none'; continue; }
     const lx = (tmpV.x * .5 + .5) * w, ly = (-tmpV.y * .5 + .5) * h; const pv = pop.classList.contains('show'); const pl = pv ? parseFloat(pop.style.left) : 0, pt = pv ? parseFloat(pop.style.top) : 0; const lw = o.name.length * 6.3 + 18, rr = { l: lx - lw / 2, r: lx + lw / 2, t: ly - 11, b: ly + 11 }; const clash = placed.some(q => q.l < rr.r && q.r > rr.l && q.t < rr.b && q.b > rr.t); if (clash && o !== state.selOrg) { o.lbl.style.display = 'none'; continue; } placed.push(rr); o.lbl.style.opacity = pv && lx > pl - 60 && lx < pl + pop.offsetWidth + 60 && ly > pt - 14 && ly < pt + pop.offsetHeight + 14 ? .15 : ''; o.lbl.style.display = 'block'; o.lbl.style.transform = `translate(${(tmpV.x * .5 + .5) * w}px,${(-tmpV.y * .5 + .5) * h}px) translate(-50%,-50%)`;
@@ -895,7 +926,8 @@ function renderSystem(s) {
   <div class="grid">${orgs.map(o => `<button class="card" data-org="${o.id}">${esc(o.name)}${o.parts.length > 1 ? `<small>${o.parts.filter(p => sexOk(p.x) && !p.t).length || ''} parts</small>` : ''}</button>`).join('')}</div>
   <h3>Works closely with</h3><div class="pills">${s.works.map(w => `<button class="pill" data-sys="${w}" style="--pc:${SYS[w].color}"><i></i>${SYS[w].name}</button>`).join('')}</div>
   <div class="fact"><b>Did you know?</b>${esc(s.fact)}</div>
-  <div class="btns"><button class="btn primary" id="startQuiz">🎯 Quiz: ${s.name} system</button></div>`;
+  <div class="btns"><button class="btn primary" id="luBtn">${LU.on ? '↩ Back to body' : '▦ Line up all parts'}</button><button class="btn primary" id="startQuiz">🎯 Quiz: ${s.name} system</button></div>`;
+  document.getElementById('luBtn').onclick = () => luEnter();
   document.getElementById('bk').onclick = () => selectSystem('all');
   content.querySelectorAll('[data-org]').forEach(b => b.onclick = () => selectOrgan(ORG[b.dataset.org]));
   content.querySelectorAll('[data-sys]').forEach(b => b.onclick = () => selectSystem(b.dataset.sys));
@@ -1113,7 +1145,7 @@ function applySlice(recalc) {
   document.querySelectorAll('#sliceAx button').forEach(b => b.classList.toggle('on', b.dataset.ax === sl.axis));
   document.getElementById('sliceR').value = sl.t;
 }
-function toggleSlice(on = !state.slice) { state.slice = on ? { axis: 'z', t: .5, flip: false } : null; applySlice(true); }
+function toggleSlice(on = !state.slice) { if (on && LU.on) luExit(true); state.slice = on ? { axis: 'z', t: .5, flip: false } : null; applySlice(true); }
 document.getElementById('sliceR').oninput = e => { if (state.slice) { state.slice.t = +e.target.value; applySlice(); } };
 document.querySelectorAll('#sliceAx button').forEach(b => b.onclick = () => { state.slice.axis = b.dataset.ax; state.slice.t = .5; applySlice(); });
 document.getElementById('sliceFlip').onclick = () => { state.slice.flip = !state.slice.flip; applySlice(); };
@@ -1251,7 +1283,8 @@ document.querySelectorAll('#sexSeg button').forEach(b => b.onclick = () => {
   state.sex = b.dataset.sex; document.querySelectorAll('#sexSeg button').forEach(x => x.classList.toggle('on', x === b));
   if (state.sel && !sexOk(state.sel.x)) { state.sel = null; state.selOrg = null; state.isolate = false; setHighlight(null); closePop(false); }
   if (state.selOrg && !sexOk(state.selOrg.sex)) { state.selOrg = null; }
-  refresh(); if (state.quiz) nextQ(); else renderPanel(); if (state.sys === 'reproductive') frameCurrent();
+  if (LU.on) { state.sel = null; state.selOrg = null; setHighlight(null); closePop(false); luBuild(); luFly(LU.box); }
+  refresh(); if (state.quiz) nextQ(); else renderPanel(); if (state.sys === 'reproductive' && !LU.on) frameCurrent();
 });
 
 
@@ -1289,6 +1322,145 @@ document.querySelectorAll('#sexSeg button').forEach(b => b.addEventListener('cli
 addEventListener('load', placeThumb); setTimeout(placeThumb, 300); placeThumb();
 renderer.domElement.addEventListener('pointerdown', () => { document.getElementById('hint').style.opacity = 0; }, { once: true });
 
+
+/* ============ LINE-UP (exploded parts board) ============ */
+const easeIO = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+function compactPart(p, mesh) {
+  const src = mesh.geometry, idx = mesh.userData.origIndex || src.index.array, P = src.attributes.position, N = src.attributes.normal, C = src.attributes.color;
+  mesh.updateMatrixWorld(); const M = mesh.matrixWorld, nm = new THREE.Matrix3().getNormalMatrix(M), ident = M.equals(new THREE.Matrix4());
+  const map = new Map(), pos = [], nrm = [], col = [], ind = new Uint32Array(p.count); const v = new THREE.Vector3(), n = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    const o = idx[p.start + i]; let k = map.get(o);
+    if (k === undefined) { k = map.size; map.set(o, k); v.fromBufferAttribute(P, o); n.fromBufferAttribute(N, o); if (!ident) { v.applyMatrix4(M); n.applyMatrix3(nm).normalize(); } pos.push(v.x, v.y, v.z); nrm.push(n.x, n.y, n.z); if (C) col.push(C.getX(o) * 255, C.getY(o) * 255, C.getZ(o) * 255); else col.push(200, 200, 200); }
+    ind[i] = k;
+  }
+  const g = new THREE.BufferGeometry(); const pa = new Float32Array(pos);
+  g.setAttribute('position', new THREE.BufferAttribute(pa, 3)); g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(nrm), 3)); g.setAttribute('color', new THREE.BufferAttribute(new Uint8Array(col), 3, true));
+  g.setIndex(new THREE.BufferAttribute(map.size > 65535 ? ind : new Uint16Array(ind), 1)); g.computeBoundingBox();
+  const c = g.boundingBox.getCenter(new THREE.Vector3()), size = g.boundingBox.getSize(new THREE.Vector3()); g.translate(-c.x, -c.y, -c.z); g.computeBoundingBox(); g.computeBoundingSphere();
+  return { g, c, size };
+}
+function luMats(sys) { if (!LU.mats[sys]) { const a = makeMat(sys), d = makeMat(sys); d.transparent = true; d.opacity = .16; d.depthWrite = false; LU.mats[sys] = { a, d }; } return LU.mats[sys]; }
+function luClear() { for (const pc of LU.pieces) { scene.remove(pc.mesh); pc.mesh.geometry.dispose(); } LU.pieces = []; LU.byPart = new Map(); LU.groups = []; document.getElementById('luLbl').innerHTML = ''; }
+function luBuild() {
+  luClear(); document.getElementById('luTip').style.display = 'none'; const sys = state.sys; const groups = [];
+  for (const o of Object.values(ORG)) {
+    if (!inFocus(o) || o.sys !== sys && !(sys === 'integumentary' && o.inset)) continue; const items = [];
+    for (const m of o.meshes) { if (m.isInstancedMesh || !sexOk(m.userData.sex) || m.userData.layer === 'shell') continue;
+      for (const p of m.userData.parts) { if (!sexOk(p.x) || hiddenParts.has(p) || !p.count) continue; const cp = compactPart(p, m); if (cp.size.length() < 1e-5) continue; items.push({ p, org: o, ...cp, sys: m.userData.org.sys }); } }
+    if (items.length) groups.push({ org: o, items });
+  }
+  groups.sort((a, b) => (a.org.other ? 1 : 0) - (b.org.other ? 1 : 0));
+  const all = groups.flatMap(g => g.items); if (!all.length) return false;
+  const dims = all.map(i => Math.max(i.size.x, i.size.y)).sort((a, b) => a - b); const med = dims[dims.length >> 1];
+  const gap = Math.min(.035, Math.max(.006, med * .3)); let area = 0; for (const i of all) area += (i.size.x + gap) * (i.size.y + gap);
+  const asp = Math.min(2.1, Math.max(.75, camera.aspect * .92)); const W = Math.max(Math.sqrt(area * asp) * 2.1, Math.max(...all.map(i => i.size.x)) + gap);
+  const lab = W * .045;
+  // pack each organ's parts into a block, then blocks into rows
+  for (const g of groups) {
+    g.items.sort((a, b) => b.size.y - a.size.y || b.size.x - a.size.x);
+    let ga = 0, mx = 0; for (const i of g.items) { ga += (i.size.x + gap) * (i.size.y + gap); mx = Math.max(mx, i.size.x + gap); }
+    const lim = Math.min(W * .62, Math.max(mx, Math.sqrt(ga * 1.9), g.org.name.length * lab * .42));
+    let x = 0, y = 0, rowH = 0, bw = 0;
+    for (const i of g.items) { const w = i.size.x + gap, h = i.size.y + gap; if (x > 0 && x + w > lim) { y += rowH; x = 0; rowH = 0; } i.bx = x + w / 2; i.by = y + h / 2; x += w; rowH = Math.max(rowH, h); bw = Math.max(bw, x); }
+    g.w = Math.max(bw, Math.min(W * .5, g.org.name.length * lab * .42)); g.h = y + rowH + lab;
+  }
+  let x = 0, y = 0, rowH = 0, totW = 0; const bgap = gap * 2.5;
+  for (const g of groups) { if (x > 0 && x + g.w > W) { y += rowH + bgap; x = 0; rowH = 0; } g.x = x; g.y = y; x += g.w + bgap; rowH = Math.max(rowH, g.h); totW = Math.max(totW, x - bgap); }
+  const totH = y + rowH, cx = 0, cy = .95;
+  const ox = cx - totW / 2, oy = cy + totH / 2; const box = new THREE.Box3();
+  const N = all.length, spread = Math.min(900, N * 5);
+  let n = 0; const lblEl = document.getElementById('luLbl');
+  for (const g of groups) {
+    g.lw = new THREE.Vector3(ox + g.x, oy - g.y - lab * .45, 0);
+    const d = document.createElement('div'); d.className = 'lbl lulbl'; d.textContent = g.org.name + (g.items.length > 1 ? ` · ${g.items.length}` : ''); d.onclick = () => selectOrgan(g.org); lblEl.appendChild(d); g.el = d;
+    for (const i of g.items) {
+      const to = new THREE.Vector3(ox + g.x + i.bx, oy - g.y - lab - i.by, 0); const mats = luMats(i.sys);
+      const mesh = new THREE.Mesh(i.g, mats.a); mesh.position.copy(i.c); scene.add(mesh);
+      const pc = { p: i.p, org: g.org, mesh, from: i.c.clone(), to, mats, delay: (n++ / N) * spread, group: g }; mesh.userData.piece = pc;
+      LU.pieces.push(pc); LU.byPart.set(i.p, pc); box.expandByPoint(to.clone().addScaledVector(i.size, .5)).expandByPoint(to.clone().addScaledVector(i.size, -.5));
+    }
+  }
+  LU.groups = groups; LU.box = box.expandByPoint(new THREE.Vector3(ox, oy, 0)); LU.t0 = performance.now(); LU.dir = 1; LU.dur = 950;
+  document.getElementById('luN').textContent = `${SYS[sys].name} system · ${N} part${N > 1 ? 's' : ''}`;
+  return true;
+}
+function luFly(box, pad = 1.08) {
+  if (!box || box.isEmpty()) return; const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
+  const fov = THREE.MathUtils.degToRad(camera.fov), H = stage.clientHeight, W = stage.clientWidth;
+  const usableW = W - (innerWidth > 900 ? 90 : 20), usableH = H - 150;
+  const dh = (s.y * pad / 2) / Math.tan(fov / 2) * (H / usableH), dw = (s.x * pad / 2) / (Math.tan(fov / 2) * camera.aspect) * (W / usableW);
+  const dist = Math.max(dh, dw) + s.z; controls.maxDistance = Math.max(8, dist * 1.6);
+  const toT = c.clone().add(new THREE.Vector3(0, -s.y * .015, 0));
+  tween = { t0: performance.now(), dur: 1100, fromP: camera.position.clone(), fromT: controls.target.clone(), toT, toP: toT.clone().add(new THREE.Vector3(0, 0, dist)) };
+}
+function luBoxOf(list) { const b = new THREE.Box3(); for (const pc of LU.pieces) if (list.includes(pc.org) && pc.mesh.visible) { pc.mesh.geometry.boundingBox || pc.mesh.geometry.computeBoundingBox(); b.union(pc.mesh.geometry.boundingBox.clone().translate(pc.to)); } return b; }
+function luStyle() {
+  for (const pc of LU.pieces) {
+    const hid = hiddenParts.has(pc.p) || (state.isolate && state.selOrg && pc.org !== state.selOrg);
+    pc.mesh.visible = !hid; const dim = state.selOrg && state.spot && pc.org !== state.selOrg && !state.isolate;
+    pc.mesh.material = dim ? pc.mats.d : pc.mats.a; pc.mesh.renderOrder = dim ? 1 : 0;
+  }
+  for (const g of LU.groups) g.el.classList.toggle('on', g.org === state.selOrg);
+}
+async function luEnter() {
+  if (LU.on) return luExit();
+  if (state.sys === 'all') { toast('Choose an organ system in the Dock first, then tap Line up.'); return; }
+  if (state.slice) toggleSlice(false);
+  await ensureSys(state.sys);
+  LU.on = true; LU.exiting = false; state.isolate = false; setHighlight(null); closePop(false);
+  if (state.rotate) { state.rotate = false; controls.autoRotate = false; document.getElementById('tRotate').classList.remove('on'); }
+  if (!luBuild()) { LU.on = false; toast('Nothing to line up here.'); return; }
+  state.sel = null; state.selOrg = null; refresh(); renderPanel(); luUI(); setTimeout(() => LU.on && luFly(LU.box), 120);
+}
+function luExit(instant) {
+  if (!LU.on) return; LU.exiting = true; setHighlight(null); closePop(false); state.sel = null; state.selOrg = null; state.isolate = false;
+  for (const pc of LU.pieces) { pc.mesh.material = pc.mats.a; pc.mesh.visible = !hiddenParts.has(pc.p); }
+  LU.on = false; refresh(); renderPanel(); luUI(); document.getElementById('luTip').style.display = 'none';
+  if (instant) { luClear(); LU.exiting = false; return; }
+  LU.t0 = performance.now(); LU.dir = -1; frameCurrent();
+}
+function luTick(now) {
+  if (!LU.pieces.length || LU.done === LU.t0) return; let busy = false;
+  for (const pc of LU.pieces) {
+    let t = (now - LU.t0 - (LU.dir > 0 ? pc.delay : (LU.pieces.length ? (Math.min(900, LU.pieces.length * 5) - pc.delay) * .6 : 0))) / LU.dur; t = Math.min(1, Math.max(0, t)); if (t < 1) busy = true;
+    const k = easeIO(LU.dir > 0 ? t : 1 - t); pc.mesh.position.lerpVectors(pc.from, pc.to, k); pc.mesh.position.z += Math.sin(Math.PI * k) * .18;
+  }
+  if (hl && state.sel && LU.byPart.has(state.sel)) hl.position.copy(LU.byPart.get(state.sel).mesh.position);
+  if (!busy) { if (LU.dir < 0) { luClear(); LU.exiting = false; } LU.done = LU.t0; }
+}
+function luLabels() {
+  const show = LU.on && LU.done === LU.t0, W = stage.clientWidth, H = stage.clientHeight;
+  for (const g of LU.groups) { if (!show) { g.el.style.display = 'none'; continue; } tmpV.copy(g.lw).project(camera); const x = (tmpV.x * .5 + .5) * W, y = (-tmpV.y * .5 + .5) * H;
+    if (tmpV.z > 1 || x < -200 || x > W + 20 || y < -20 || y > H + 20) { g.el.style.display = 'none'; continue; } tmpV.copy(g.lw).x += g.w; tmpV.project(camera); g.el.style.maxWidth = Math.max(40, (tmpV.x * .5 + .5) * W - x - 4) + 'px'; g.el.style.display = 'block'; g.el.style.transform = `translate(${x}px,${y}px) translate(0,-50%)`; }
+}
+function luSelect(pc, at, fly) {
+  state.sel = pc.p; state.selOrg = pc.org; if (state.quiz) state.quiz = null;
+  pc.mesh.geometry.computeBoundingBox(); state.selBox = pc.mesh.geometry.boundingBox.clone().translate(pc.to);
+  state.anchorW = at && at.w ? at.w : state.selBox.getCenter(new THREE.Vector3());
+  refresh(); setHighlight({ mesh: pc.mesh, start: 0, count: pc.mesh.geometry.index.count }); openPop(pc.p, pc.org, at); renderPanel();
+  if (fly) flyToBox(state.selBox, 2.4);
+}
+function luUI() {
+  for (const f of window.__floor || []) f.visible = !LU.on; document.getElementById('luTip').style.display = 'none';
+  document.getElementById('luBar').classList.toggle('on', LU.on); document.getElementById('tLineup').classList.toggle('on', LU.on);
+  document.getElementById('hint').style.display = LU.on ? 'none' : '';
+}
+let toastT = 0; function toast(t) { const el = document.getElementById('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2600); }
+// hover names
+let luHoverQ = null;
+renderer.domElement.addEventListener('pointermove', e => { if (!LU.on || e.buttons || e.pointerType === 'touch') return; luHoverQ = e; });
+renderer.domElement.addEventListener('pointerdown', () => { document.getElementById('luTip').style.display = 'none'; });
+renderer.domElement.addEventListener('pointerleave', () => { document.getElementById('luTip').style.display = 'none'; });
+function luHover() {
+  const e = luHoverQ; if (!e) return; luHoverQ = null; const tip = document.getElementById('luTip');
+  const r = renderer.domElement.getBoundingClientRect(); ptr.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ptr, camera);
+  const h = ray.intersectObjects(LU.pieces.filter(pc => pc.mesh.visible).map(pc => pc.mesh), false)[0];
+  if (!h) { tip.style.display = 'none'; renderer.domElement.style.cursor = ''; return; }
+  const pc = h.object.userData.piece; tip.textContent = cap(pc.p.n); tip.style.display = 'block'; tip.style.transform = `translate(${e.clientX - r.left + 14}px,${e.clientY - r.top + 12}px)`; renderer.domElement.style.cursor = 'pointer';
+}
+document.getElementById('luBack').onclick = () => luExit();
+document.getElementById('tLineup').onclick = () => luEnter();
 
 /* ============ MOVE PAD + KEYS ============ */
 const padMove = { up: [0, 1], down: [0, -1], left: [-1, 0], right: [1, 0] };
@@ -1335,7 +1507,7 @@ function loop(now) {
   const dt = Math.min(.05, (now - lastT) / 1000); lastT = now; stepFades(dt);
   const pulse = .5 + .5 * Math.sin(now / 200); hlMat.emissiveIntensity = .5 + .7 * pulse; hlMat.opacity = .45 + .3 * pulse; olMat.opacity = .7 + .3 * pulse;
   if (CU.open) { CU.ctl.update(); CU.r.render(CU.scene, CU.cam); return; }
-  controls.update(); renderer.render(scene, camera); updateLabels(); updateLeader(now);
+  luTick(now); luHover(); controls.update(); renderer.render(scene, camera); updateLabels(); luLabels(); updateLeader(now);
 }
 requestAnimationFrame(loop);
 window.__A = { ORG, ensureSys, scene, camera, controls, renderer, boxOf, flyToBox, refresh, state };
