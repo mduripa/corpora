@@ -721,6 +721,7 @@ renderer.domElement.addEventListener('pointerup', e => {
   if (!down) return; const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y); down = null; if (moved > 7) return;
   const r = renderer.domElement.getBoundingClientRect(); ptr.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
   ray.setFromCamera(ptr, camera);
+  if (LIFT.mesh && LIFT.dir > 0 && ray.intersectObject(LIFT.mesh, false).length) { openCloseup(LIFT.p, LIFT.org, 'part'); return; }
   if (LU.on) { const h = ray.intersectObjects(LU.pieces.filter(pc => pc.mesh.visible).map(pc => pc.mesh), false)[0]; const pc = h && h.object.userData.piece;
     if (state.quiz && state.quiz.q && state.quiz.q.type === 'tap' && !state.quiz.answered) { if (pc) answerTap(pc.org); return; }
     if (!pc) return closePop(true); const dbl = lastTap && lastTap.p === pc.p && performance.now() - lastTap.t < 420; lastTap = { p: pc.p, t: performance.now() }; if (dbl) { openCloseup(pc.p, pc.org, 'part'); return; }
@@ -825,7 +826,7 @@ function updateLeader(now) {
   if (!dragging && !tween && now - lastCheck > 350 && innerWidth > 900) { lastCheck = now;
     const near = { l: a.x - 30, t: a.y - 30, r: a.x + 30, b: a.y + 30 }; if (!off && ovl(P, near) > 0) placePop(false); }
 }
-function closePop(deselect) { leader.classList.remove('on'); pop.classList.remove('show'); setTimeout(() => { if (!pop.classList.contains('show')) pop.style.display = 'none'; }, 260); if (deselect && state.sel) { state.sel = null; state.selOrg = null; state.isolate = false; setHighlight(null); refresh(); renderPanel(); } }
+function closePop(deselect) { liftEnd(); leader.classList.remove('on'); pop.classList.remove('show'); setTimeout(() => { if (!pop.classList.contains('show')) pop.style.display = 'none'; }, 260); if (deselect && state.sel) { state.sel = null; state.selOrg = null; state.isolate = false; setHighlight(null); refresh(); renderPanel(); } }
 
 /* ============ SELECTION ============ */
 function selectPart(p, org, at, fly = false) {
@@ -834,8 +835,8 @@ function selectPart(p, org, at, fly = false) {
   state.sel = p; state.selOrg = org; if (state.quiz) state.quiz = null;
   state.selBox = p.mesh && !p.mesh.isInstancedMesh ? partBox(p) : null;
   state.anchorW = at && at.w ? at.w : state.selBox ? state.selBox.getCenter(new THREE.Vector3()) : null;
-  refresh(); setHighlight(p); openPop(p, org, at); renderPanel();
-  if (fly) flyToBox(partBox(p), 2.2);
+  refresh(); setHighlight(p); const lifted = liftStart(p, org, p.mesh); if (lifted) at = null; openPop(p, org, at); renderPanel();
+  if (fly && !lifted) flyToBox(partBox(p), 2.2);
 }
 async function selectOrgan(o) {
   await ensureSys(o.sys);
@@ -865,7 +866,7 @@ function updateLabels() {
   const w = stage.clientWidth, h = stage.clientHeight; const tapQ = state.quiz && state.quiz.q && state.quiz.q.type === 'tap' && !state.quiz.answered;
   const lorder = Object.values(ORG); if (state.selOrg) { lorder.splice(lorder.indexOf(state.selOrg), 1); lorder.unshift(state.selOrg); }
   for (const o of lorder) { if (!o.lbl) continue;
-    const show = !LU.on && state.labels && !tapQ && !o.other && inFocus(o) && o.meshes.some(m => m.visible && sexOk(m.userData.sex)) && (state.sys !== 'all') && (!state.isolate || o === state.selOrg);
+    const show = !LU.on && !LIFT.mesh && state.labels && !tapQ && !o.other && inFocus(o) && o.meshes.some(m => m.visible && sexOk(m.userData.sex)) && (state.sys !== 'all') && (!state.isolate || o === state.selOrg);
     if (!show) { o.lbl.style.display = 'none'; continue; }
     tmpV.copy(o.anchor).project(camera); if (tmpV.z > 1) { o.lbl.style.display = 'none'; continue; }
     const lx = (tmpV.x * .5 + .5) * w, ly = (-tmpV.y * .5 + .5) * h; const pv = pop.classList.contains('show'); const pl = pv ? parseFloat(pop.style.left) : 0, pt = pv ? parseFloat(pop.style.top) : 0; const lw = o.name.length * 6.3 + 18, rr = { l: lx - lw / 2, r: lx + lw / 2, t: ly - 11, b: ly + 11 }; const clash = placed.some(q => q.l < rr.r && q.r > rr.l && q.t < rr.b && q.b > rr.t); if (clash && o !== state.selOrg) { o.lbl.style.display = 'none'; continue; } placed.push(rr); o.lbl.style.opacity = pv && lx > pl - 60 && lx < pl + pop.offsetWidth + 60 && ly > pt - 14 && ly < pt + pop.offsetHeight + 14 ? .15 : ''; o.lbl.style.display = 'block'; o.lbl.style.transform = `translate(${(tmpV.x * .5 + .5) * w}px,${(-tmpV.y * .5 + .5) * h}px) translate(-50%,-50%)`;
@@ -1145,7 +1146,7 @@ function applySlice(recalc) {
   document.querySelectorAll('#sliceAx button').forEach(b => b.classList.toggle('on', b.dataset.ax === sl.axis));
   document.getElementById('sliceR').value = sl.t;
 }
-function toggleSlice(on = !state.slice) { if (on && LU.on) luExit(true); state.slice = on ? { axis: 'z', t: .5, flip: false } : null; applySlice(true); }
+function toggleSlice(on = !state.slice) { if (on) liftRemove(); if (on && LU.on) luExit(true); state.slice = on ? { axis: 'z', t: .5, flip: false } : null; applySlice(true); }
 document.getElementById('sliceR').oninput = e => { if (state.slice) { state.slice.t = +e.target.value; applySlice(); } };
 document.querySelectorAll('#sliceAx button').forEach(b => b.onclick = () => { state.slice.axis = b.dataset.ax; state.slice.t = .5; applySlice(); });
 document.getElementById('sliceFlip').onclick = () => { state.slice.flip = !state.slice.flip; applySlice(); };
@@ -1343,6 +1344,7 @@ function compactPart(p, mesh) {
 function luMats(sys) { if (!LU.mats[sys]) { const a = makeMat(sys), d = makeMat(sys); d.transparent = true; d.opacity = .16; d.depthWrite = false; LU.mats[sys] = { a, d }; } return LU.mats[sys]; }
 function luClear() { for (const pc of LU.pieces) { scene.remove(pc.mesh); pc.mesh.geometry.dispose(); } LU.pieces = []; LU.byPart = new Map(); LU.groups = []; document.getElementById('luLbl').innerHTML = ''; }
 function luBuild() {
+  liftRemove();
   luClear(); document.getElementById('luTip').style.display = 'none'; const sys = state.sys; const groups = [];
   for (const o of Object.values(ORG)) {
     if (!inFocus(o) || o.sys !== sys && !(sys === 'integumentary' && o.inset)) continue; const items = [];
@@ -1414,6 +1416,7 @@ async function luEnter() {
   state.sel = null; state.selOrg = null; refresh(); renderPanel(); luUI(); setTimeout(() => LU.on && luFly(LU.box), 120);
 }
 function luExit(instant) {
+  liftRemove();
   if (!LU.on) return; LU.exiting = true; setHighlight(null); closePop(false); state.sel = null; state.selOrg = null; state.isolate = false;
   for (const pc of LU.pieces) { pc.mesh.material = pc.mats.a; pc.mesh.visible = !hiddenParts.has(pc.p); }
   LU.on = false; refresh(); renderPanel(); luUI(); document.getElementById('luTip').style.display = 'none';
@@ -1430,7 +1433,7 @@ function luTick(now) {
   if (!busy) { if (LU.dir < 0) { luClear(); LU.exiting = false; } LU.done = LU.t0; }
 }
 function luLabels() {
-  const show = LU.on && LU.done === LU.t0, W = stage.clientWidth, H = stage.clientHeight;
+  const show = LU.on && LU.done === LU.t0 && !LIFT.mesh, W = stage.clientWidth, H = stage.clientHeight;
   for (const g of LU.groups) { if (!show) { g.el.style.display = 'none'; continue; } tmpV.copy(g.lw).project(camera); const x = (tmpV.x * .5 + .5) * W, y = (-tmpV.y * .5 + .5) * H;
     if (tmpV.z > 1 || x < -200 || x > W + 20 || y < -20 || y > H + 20) { g.el.style.display = 'none'; continue; } tmpV.copy(g.lw).x += g.w; tmpV.project(camera); g.el.style.maxWidth = Math.max(40, (tmpV.x * .5 + .5) * W - x - 4) + 'px'; g.el.style.display = 'block'; g.el.style.transform = `translate(${x}px,${y}px) translate(0,-50%)`; }
 }
@@ -1438,8 +1441,8 @@ function luSelect(pc, at, fly) {
   state.sel = pc.p; state.selOrg = pc.org; if (state.quiz) state.quiz = null;
   pc.mesh.geometry.computeBoundingBox(); state.selBox = pc.mesh.geometry.boundingBox.clone().translate(pc.to);
   state.anchorW = at && at.w ? at.w : state.selBox.getCenter(new THREE.Vector3());
-  refresh(); setHighlight({ mesh: pc.mesh, start: 0, count: pc.mesh.geometry.index.count }); openPop(pc.p, pc.org, at); renderPanel();
-  if (fly) flyToBox(state.selBox, 2.4);
+  refresh(); setHighlight({ mesh: pc.mesh, start: 0, count: pc.mesh.geometry.index.count }); const lifted = liftStart(pc.p, pc.org, pc.mesh); if (lifted) at = null; openPop(pc.p, pc.org, at); renderPanel();
+  if (fly && !lifted) flyToBox(state.selBox, 2.4);
 }
 function luUI() {
   for (const f of window.__floor || []) f.visible = !LU.on; document.getElementById('luTip').style.display = 'none';
@@ -1453,7 +1456,7 @@ renderer.domElement.addEventListener('pointermove', e => { if (!LU.on || e.butto
 renderer.domElement.addEventListener('pointerdown', () => { document.getElementById('luTip').style.display = 'none'; });
 renderer.domElement.addEventListener('pointerleave', () => { document.getElementById('luTip').style.display = 'none'; });
 function luHover() {
-  const e = luHoverQ; if (!e) return; luHoverQ = null; const tip = document.getElementById('luTip');
+  const e = luHoverQ; if (!e) return; luHoverQ = null; const tip = document.getElementById('luTip'); if (LIFT.mesh) { tip.style.display = 'none'; return; }
   const r = renderer.domElement.getBoundingClientRect(); ptr.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ptr, camera);
   const h = ray.intersectObjects(LU.pieces.filter(pc => pc.mesh.visible).map(pc => pc.mesh), false)[0];
   if (!h) { tip.style.display = 'none'; renderer.domElement.style.cursor = ''; return; }
@@ -1461,6 +1464,43 @@ function luHover() {
 }
 document.getElementById('luBack').onclick = () => luExit();
 document.getElementById('tLineup').onclick = () => luEnter();
+
+/* ============ LIFT (selected part pops out, big) ============ */
+const LIFT = { mesh: null, glow: null, p: null, org: null, t0: 0, dir: 1, from: new THREE.Vector3(), fromS: 1, center: new THREE.Vector3(), box: new THREE.Box3(), r0: 1, spin: 0 };
+const glowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(120,180,255,.55)'); gr.addColorStop(.45, 'rgba(70,120,230,.22)'); gr.addColorStop(1, 'rgba(40,70,160,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
+function liftRemove() { if (LIFT.mesh) { scene.remove(LIFT.mesh, LIFT.glow); if (LIFT.own) LIFT.mesh.geometry.dispose(); } LIFT.mesh = null; LIFT.glow = null; LIFT.p = null; }
+function liftStart(p, org, src) {
+  liftRemove(); if (state.slice || !src) return false;
+  let geo, from, own = false;
+  if (src.userData.piece) { geo = src.geometry; from = src.position.clone(); }
+  else { if (src.isInstancedMesh) return false; const cp = compactPart(p, src); geo = cp.g; from = cp.c; own = true; }
+  if (!geo.boundingSphere) geo.computeBoundingSphere();
+  const mat = makeMat(org.sys); const m = new THREE.Mesh(geo, mat); m.renderOrder = 9; m.position.copy(from); m.userData.lift = true;
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, depthTest: false, opacity: 0 })); glow.renderOrder = 8;
+  scene.add(glow, m);
+  Object.assign(LIFT, { mesh: m, glow, p, org, own, t0: performance.now(), dir: 1, from, r0: Math.max(geo.boundingSphere.radius, 1e-4), spin: 0 });
+  liftPose(); state.anchorW = LIFT.center; state.selBox = LIFT.box; return true;
+}
+function liftEnd() { if (!LIFT.mesh || LIFT.dir < 0) return; LIFT.dir = -1; LIFT.t0 = performance.now(); }
+function liftPose() {
+  // target: in front of the camera, a bit left of centre so the popup fits beside it
+  const D = Math.max(.15, camera.position.distanceTo(controls.target) * .55), th = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+  const wide = innerWidth > 900, R = D * th * (wide ? .3 : .26);
+  const local = new THREE.Vector3(wide ? -D * th * camera.aspect * .2 : 0, wide ? -D * th * .02 : D * th * .18, -D);
+  LIFT.target = camera.localToWorld(local); LIFT.scale = R / LIFT.r0;
+  LIFT.box.setFromCenterAndSize(LIFT.target, new THREE.Vector3(R * 2, R * 2, R * 2));
+}
+function liftTick(now, dt) {
+  if (!LIFT.mesh) return; liftPose();
+  const t = Math.min(1, (now - LIFT.t0) / 750), k = easeIO(LIFT.dir > 0 ? t : 1 - t);
+  const m = LIFT.mesh; m.position.lerpVectors(LIFT.from, LIFT.target, k);
+  m.position.addScaledVector(camera.up, Math.sin(Math.PI * k) * LIFT.r0 * LIFT.scale * .25);
+  const s = 1 + (LIFT.scale - 1) * k; m.scale.setScalar(s);
+  LIFT.spin += dt * .45 * k; m.rotation.set(0, LIFT.spin, 0);
+  LIFT.center.copy(m.position);
+  LIFT.glow.position.copy(m.position).addScaledVector(camera.getWorldDirection(tmpV), LIFT.r0 * s * .6); LIFT.glow.scale.setScalar(LIFT.r0 * s * 3.6); LIFT.glow.material.opacity = k * .9;
+  if (LIFT.dir < 0 && t >= 1) liftRemove();
+}
 
 /* ============ MOVE PAD + KEYS ============ */
 const padMove = { up: [0, 1], down: [0, -1], left: [-1, 0], right: [1, 0] };
@@ -1505,9 +1545,9 @@ function loop(now) {
   requestAnimationFrame(loop);
   if (tween) { const t = Math.min(1, (now - tween.t0) / tween.dur), k = ease(t); camera.position.lerpVectors(tween.fromP, tween.toP, k); controls.target.lerpVectors(tween.fromT, tween.toT, k); if (t >= 1) { tween = null; if (pop.classList.contains('show')) placePop(false); } }
   const dt = Math.min(.05, (now - lastT) / 1000); lastT = now; stepFades(dt);
-  const pulse = .5 + .5 * Math.sin(now / 200); hlMat.emissiveIntensity = .5 + .7 * pulse; hlMat.opacity = .45 + .3 * pulse; olMat.opacity = .7 + .3 * pulse;
+  const pulse = .5 + .5 * Math.sin(now / 200); hlMat.emissiveIntensity = .5 + .7 * pulse; hlMat.opacity = (LIFT.mesh ? .2 : .45) + (LIFT.mesh ? .15 : .3) * pulse; olMat.opacity = .7 + .3 * pulse;
   if (CU.open) { CU.ctl.update(); CU.r.render(CU.scene, CU.cam); return; }
-  luTick(now); luHover(); controls.update(); renderer.render(scene, camera); updateLabels(); luLabels(); updateLeader(now);
+  luTick(now); liftTick(now, dt); luHover(); controls.update(); renderer.render(scene, camera); updateLabels(); luLabels(); updateLeader(now);
 }
 requestAnimationFrame(loop);
 window.__A = { ORG, ensureSys, scene, camera, controls, renderer, boxOf, flyToBox, refresh, state };
