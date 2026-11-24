@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Corpara · 3D Human Anatomy</title>
+<link rel="icon" href="icons/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ease:cubic-bezier(.32,.72,0,1);--spring:cubic-bezier(.34,1.36,.64,1);
+  --text:#f5f5f7;--text2:#a1a1a6;--text3:#6e6e73;--sep:rgba(255,255,255,.09);--fill:rgba(255,255,255,.065);--fill2:rgba(255,255,255,.11);
+  --accent:#0a84ff;--glass:rgba(40,40,46,.62);--glass2:rgba(30,30,34,.78);
+  --muted:var(--text2);--ink:var(--text);--soft:var(--fill);--line:var(--sep);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",system-ui,sans-serif;color:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+  background:#0b0f1e radial-gradient(1200px 800px at 12% 8%,#3b2a6b 0%,transparent 60%),radial-gradient(1000px 700px at 90% 20%,#0d4f7a 0%,transparent 55%),radial-gradient(900px 700px at 60% 100%,#6b2340 0%,transparent 55%);}
+button,input{font:inherit;color:inherit}
+button{cursor:default;border:0;background:none;-webkit-user-select:none;user-select:none}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:10px;border:3px solid transparent;background-clip:content-box}::-webkit-scrollbar-track{background:transparent}
+
+/* ===== window ===== */
+.win{position:fixed;inset:12px;border-radius:14px;overflow:hidden;display:grid;grid-template-columns:1fr 372px;grid-template-rows:52px 1fr;
+  background:rgba(22,22,26,.55);box-shadow:0 0 0 .5px rgba(255,255,255,.14) inset,0 0 0 1px rgba(0,0,0,.6),0 30px 90px rgba(0,0,0,.55);
+  backdrop-filter:blur(40px) saturate(170%);-webkit-backdrop-filter:blur(40px) saturate(170%);transition:grid-template-columns .5s var(--ease)}
+.win.noinsp{grid-template-columns:1fr 0px}
+.win.full{inset:0;border-radius:0}
+.titlebar{grid-column:1/3;display:flex;align-items:center;gap:14px;padding:0 14px 0 18px;border-bottom:.5px solid rgba(0,0,0,.55);box-shadow:0 .5px 0 rgba(255,255,255,.06);
+  background:linear-gradient(rgba(58,58,64,.55),rgba(44,44,50,.55));-webkit-user-select:none;user-select:none;position:relative;z-index:8}
+.lights{display:flex;gap:8px;margin-right:6px}
+.lights button{width:12px;height:12px;border-radius:50%;position:relative;box-shadow:0 0 0 .5px rgba(0,0,0,.35) inset;display:grid;place-items:center;font-size:9px;line-height:1;color:transparent;font-weight:900}
+.lights .r{background:#ff5f57}.lights .y{background:#febc2e}.lights .g{background:#28c840}
+.lights:hover .r{color:#4d0000}.lights:hover .y{color:#5a3a00}.lights:hover .g{color:#003a00}
+.appname{display:flex;align-items:center;gap:9px;font-weight:700;font-size:13.5px;letter-spacing:-.1px}
+.appname img{width:24px;height:24px;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+.appname small{font-weight:500;color:var(--text2);font-size:12px}
+.spacer{flex:1}
+.seg{display:flex;background:rgba(0,0,0,.28);border-radius:8px;padding:2px;box-shadow:0 0 0 .5px rgba(255,255,255,.08) inset;position:relative}
+.seg button{position:relative;z-index:1;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;transition:color .25s var(--ease)}
+.seg button.on{color:#fff}
+.seg .thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;background:rgba(255,255,255,.17);box-shadow:0 1px 3px rgba(0,0,0,.35),0 0 0 .5px rgba(255,255,255,.12) inset;transition:left .35s var(--spring),width .35s var(--spring)}
+
+/* ===== stage ===== */
+#stage{-webkit-user-select:none;user-select:none;position:relative;background:radial-gradient(ellipse at 50% 32%,#1e2f52 0%,#111b33 52%,#080d1a 100%);overflow:hidden;touch-action:none}
+#stage canvas{display:block;width:100%;height:100%;outline:none}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lbl{transition:opacity .25s var(--ease);position:absolute;left:0;top:0;background:rgba(30,30,34,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;white-space:nowrap;box-shadow:0 0 0 .5px rgba(255,255,255,.15) inset,0 4px 12px rgba(0,0,0,.3);pointer-events:auto;display:none;animation:fadeIn .3s var(--ease)}
+.glass{background:var(--glass);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);box-shadow:0 0 0 .5px rgba(255,255,255,.16) inset,0 0 0 .5px rgba(0,0,0,.5),0 10px 30px rgba(0,0,0,.35)}
+.tools{position:absolute;right:14px;top:14px;display:flex;flex-direction:column;gap:2px;z-index:3;padding:5px;border-radius:14px}
+.tool{width:34px;height:34px;border-radius:9px;color:#e5e5ea;display:grid;place-items:center;position:relative;transition:background .2s var(--ease),transform .2s var(--spring)}
+.tool svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tool:hover{background:var(--fill2)}
+.tool:active{transform:scale(.9)}
+.tool.on{background:var(--accent);color:#fff}
+.tool span{position:absolute;right:44px;top:50%;transform:translateY(-50%) translateX(6px);background:rgba(40,40,46,.92);backdrop-filter:blur(20px);color:#fff;font-size:11.5px;font-weight:500;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s var(--ease) .25s,transform .25s var(--ease) .25s;box-shadow:0 0 0 .5px rgba(255,255,255,.15) inset}
+.tool:hover span{opacity:1;transform:translateY(-50%)}
+.tool .n{position:absolute;top:-3px;right:-3px;background:#ff453a;color:#fff;font-size:9.5px;font-weight:700;border-radius:8px;padding:1px 5px;opacity:1;transform:none;right:-3px;left:auto;box-shadow:none}
+.hint{position:absolute;left:50%;top:14px;transform:translateX(-50%);color:var(--text2);font-size:11.5px;padding:5px 11px;border-radius:999px;pointer-events:none;transition:opacity .4s var(--ease)}
+.badge{position:absolute;left:14px;top:14px;color:#fff;font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;padding:6px 12px 6px 7px;border-radius:12px;pointer-events:none}
+.badge img{width:24px;height:24px;object-fit:contain;transition:transform .5s var(--spring)}
+.badge.bump img{transform:scale(1.25) rotate(-6deg)}
+#loader{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:var(--text);border-radius:14px;padding:16px 18px;min-width:260px;font-size:12.5px;font-weight:500;z-index:4;display:none;animation:popIn .4s var(--spring)}
+#loader .row{display:flex;align-items:center;gap:10px}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.18);border-top-color:#fff;animation:spin .8s linear infinite;flex:none}
+#loader .bar{height:4px;background:rgba(255,255,255,.12);border-radius:4px;margin-top:11px;overflow:hidden}
+#loader .bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:4px;transition:width .35s var(--ease)}
+
+/* ===== dock ===== */
+#systems{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:flex;align-items:flex-end;gap:4px;padding:6px 8px 8px;border-radius:20px;z-index:4;max-width:calc(100% - 24px)}
+.chip{position:relative;display:flex;flex-direction:column;align-items:center;--s:1;transition:transform .2s var(--ease)}
+.chip .dot{width:calc(46px * var(--s));height:calc(46px * var(--s));border-radius:calc(12px * var(--s));display:grid;place-items:center;transition:width .14s var(--ease),height .14s var(--ease),border-radius .14s var(--ease);overflow:hidden}
+.chip .tip{position:absolute;bottom:calc(46px * var(--s) + 22px);left:50%;transform:translateX(-50%) translateY(4px);background:rgba(40,40,46,.9);backdrop-filter:blur(20px);color:#fff;font-size:12px;font-weight:500;padding:4px 10px;border-radius:7px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s,transform .2s var(--ease);box-shadow:0 0 0 .5px rgba(255,255,255,.15) inset,0 6px 16px rgba(0,0,0,.35)}
+.chip:hover .tip{opacity:1;transform:translateX(-50%)}
+.chip .run{position:absolute;bottom:-6px;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.85);opacity:0;transition:opacity .3s}
+.chip.on .run{opacity:1}
+.chip.bounce .dot{animation:dockBounce .7s var(--ease)}
+.chip .lab{display:none}
+img.ico{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.55))}
+.dot.img{background:linear-gradient(160deg,#3a4a70,#151d33);box-shadow:0 0 0 .5px rgba(255,255,255,.18) inset,0 2px 6px rgba(0,0,0,.4);padding:3px}
+
+/* ===== popover ===== */
+#pop{position:absolute;z-index:5;width:300px;background:rgba(36,36,40,.78);backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);border-radius:14px;
+  box-shadow:0 0 0 .5px rgba(255,255,255,.17) inset,0 0 0 .5px rgba(0,0,0,.6),0 22px 60px rgba(0,0,0,.5);display:none;overflow:hidden;opacity:0;transform:scale(.92) translateY(6px);transition:opacity .22s var(--ease),transform .38s var(--spring)}
+#pop.show{opacity:1;transform:none}
+#pop.glide{transition:opacity .22s var(--ease),transform .38s var(--spring),left .55s var(--ease),top .55s var(--ease)}
+#leader{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;overflow:visible;opacity:0;transition:opacity .3s var(--ease)}
+#leader.on{opacity:1}
+#leader .ln{fill:none;stroke:#ffd23f;stroke-width:2;stroke-linecap:round;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+#leader .dt{fill:#ffd23f;stroke:#1c1c20;stroke-width:1.5}
+#leader .rg{fill:none;stroke:#ffd23f;stroke-width:2;transform-box:fill-box;transform-origin:center;animation:ring 1.6s var(--ease) infinite}
+#leader .tip{fill:#ffd23f}
+@keyframes ring{0%{transform:scale(.6);opacity:1}100%{transform:scale(2.6);opacity:0}}
+#pop .ph{padding:13px 14px 10px;border-bottom:.5px solid var(--sep);position:relative}
+#pop .tag{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--text2)}
+#pop .tag img{width:18px;height:18px;object-fit:contain}
+#pop h4{font-size:15px;font-weight:700;line-height:1.25;margin-top:5px;padding-right:24px;letter-spacing:-.2px}
+#pop .org{font-size:12px;color:var(--text2);margin-top:2px}
+#pop .x{position:absolute;right:9px;top:9px;width:22px;height:22px;border-radius:50%;font-size:11px;color:var(--text2);background:var(--fill2);display:grid;place-items:center}
+#pop .pb{padding:10px 14px 12px;max-height:230px;overflow-y:auto}
+#pop .lab{font-size:10.5px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+#pop ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+#pop li{font-size:13px;line-height:1.45;padding-left:15px;position:relative;color:#e5e5ea}
+#pop li::before{content:"";position:absolute;left:2px;top:7px;width:6px;height:6px;border-radius:50%;background:var(--c)}
+#pop li.key{font-weight:600;color:#fff}
+#pop .decode{margin-top:8px;font-size:12px;line-height:1.5;background:rgba(255,214,10,.1);border-radius:9px;padding:8px 10px;color:#f3e3a8;box-shadow:0 0 0 .5px rgba(255,214,10,.25) inset}
+#pop .pa{display:flex;gap:6px;padding:0 12px 12px}
+#pop .pa.top{padding-bottom:6px}
+#pop .pa button{flex:1;padding:7px 6px;border-radius:8px;font-size:12px;font-weight:600;background:var(--fill2);transition:background .2s,transform .15s var(--spring)}
+#pop .pa button:hover{background:rgba(255,255,255,.17)}
+#pop .pa button:active{transform:scale(.95)}
+#pop .pa button.primary{background:var(--accent);color:#fff}
+#pop .pa button.alt{background:rgba(10,132,255,.18);color:#64b5ff}
+
+/* ===== inspector ===== */
+#panel{background:rgba(28,28,32,.72);border-left:.5px solid rgba(0,0,0,.6);box-shadow:inset .5px 0 0 rgba(255,255,255,.06);overflow-y:auto;overflow-x:hidden;min-width:0}
+.pad{padding:22px 22px 30px;width:372px}
+.pad.in{animation:panelIn .42s var(--ease)}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--text2);display:flex;align-items:center;gap:7px}
+.eyebrow i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.back{font-size:13px;font-weight:500;color:var(--accent);display:inline-flex;gap:4px;margin-bottom:12px;padding:2px 0}
+.back:hover{opacity:.8}
+h2{font-size:24px;font-weight:700;letter-spacing:-.6px;margin:6px 0 8px;line-height:1.15}
+h2 .hico{display:inline-grid;width:40px;height:40px;vertical-align:-10px;margin-right:8px}
+.lead{font-size:14px;line-height:1.6;color:#d1d1d6}
+h3{font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--text3);margin:22px 0 9px}
+ul.list{list-style:none;display:flex;flex-direction:column;gap:7px}
+ul.list li{font-size:13.5px;line-height:1.5;padding-left:18px;position:relative;color:#e5e5ea}
+ul.list li::before{content:"";position:absolute;left:4px;top:8px;width:6px;height:6px;border-radius:50%;background:var(--c)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.card{background:var(--fill);border-radius:10px;padding:10px 12px;text-align:left;font-size:13px;font-weight:600;line-height:1.3;box-shadow:0 0 0 .5px rgba(255,255,255,.06) inset;transition:background .2s var(--ease),transform .25s var(--spring)}
+.card:hover{background:var(--fill2)}
+.card:active{transform:scale(.97)}
+.card small{display:block;font-weight:400;color:var(--text2);font-size:11.5px;margin-top:3px}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{font-size:12px;font-weight:500;padding:5px 10px;border-radius:999px;background:var(--fill);display:inline-flex;gap:6px;align-items:center;transition:background .2s}
+.pill:hover{background:var(--fill2)}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--pc)}
+.fact{background:rgba(255,214,10,.08);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.55;color:#eadfb8;margin-top:18px;box-shadow:0 0 0 .5px rgba(255,214,10,.2) inset}
+.fact b{display:block;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;margin-bottom:4px;color:#ffd60a;font-weight:600}
+.where{display:flex;gap:10px;background:var(--fill);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.5;margin-top:4px;color:#e5e5ea}
+.selpart{display:flex;gap:10px;align-items:center;background:rgba(10,132,255,.14);box-shadow:0 0 0 .5px rgba(10,132,255,.45) inset;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:600;margin-bottom:10px;color:#9fd0ff}
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:16px}
+.btn{padding:7px 13px;border-radius:8px;font-size:13px;font-weight:500;background:var(--fill2);display:inline-flex;align-items:center;gap:6px;box-shadow:0 0 0 .5px rgba(255,255,255,.08) inset;transition:background .2s,transform .2s var(--spring)}
+.btn:hover{background:rgba(255,255,255,.17)}
+.btn:active{transform:scale(.95)}
+.btn.primary{background:var(--accent);color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.nav{display:flex;justify-content:space-between;gap:8px;margin-top:22px;padding-top:16px;border-top:.5px solid var(--sep)}
+.nav .btn{flex:1;justify-content:center;font-size:12px}
+.sysgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.sysgrid .card{display:flex;gap:10px;align-items:center}
+.sysgrid .card .dot{width:34px;height:34px;border-radius:9px;flex:none;display:grid;place-items:center}
+.search{position:relative;margin-top:14px}
+.search input{width:100%;border:0;border-radius:9px;padding:8px 12px 8px 32px;font-size:13.5px;outline:none;background:rgba(0,0,0,.3);box-shadow:0 0 0 .5px rgba(255,255,255,.1) inset;transition:box-shadow .25s var(--ease)}
+.search input::placeholder{color:var(--text3)}
+.search input:focus{box-shadow:0 0 0 .5px rgba(255,255,255,.1) inset,0 0 0 3.5px rgba(10,132,255,.55)}
+.search::before{content:"";position:absolute;left:11px;top:50%;width:11px;height:11px;margin-top:-7px;border:1.6px solid var(--text2);border-radius:50%}
+.search::after{content:"";position:absolute;left:21px;top:50%;width:5px;height:1.6px;margin-top:4px;background:var(--text2);transform:rotate(45deg)}
+.results{display:flex;flex-direction:column;gap:1px;margin-top:6px}
+.res{display:flex;align-items:center;gap:9px;text-align:left;padding:7px 10px;border-radius:7px;font-size:13px;animation:fadeIn .3s var(--ease) both}
+.res:hover{background:var(--accent);color:#fff}
+.res:hover small{color:rgba(255,255,255,.8)}
+.res i{width:8px;height:8px;border-radius:50%;background:var(--pc);flex:none}
+.res small{color:var(--text2);margin-left:auto;font-size:11px;white-space:nowrap}
+.qbox{background:var(--fill);border-radius:14px;padding:16px;margin-top:12px;box-shadow:0 0 0 .5px rgba(255,255,255,.06) inset}
+.qtype{font-size:10.5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--text2)}
+.qtext{font-size:16px;font-weight:700;line-height:1.4;margin:6px 0 14px;letter-spacing:-.2px}
+.qtext span{color:#d1d1d6!important}
+.opts{display:flex;flex-direction:column;gap:6px}
+.opt{background:rgba(255,255,255,.07);border-radius:10px;padding:10px 13px;text-align:left;font-size:13.5px;font-weight:500;box-shadow:0 0 0 .5px rgba(255,255,255,.08) inset;transition:background .2s,transform .2s var(--spring)}
+.opt:hover{background:rgba(255,255,255,.13)}
+.opt:active{transform:scale(.98)}
+.opt.right{background:rgba(48,209,88,.2);box-shadow:0 0 0 1px rgba(48,209,88,.6) inset}
+.opt.wrong{background:rgba(255,69,58,.18);box-shadow:0 0 0 1px rgba(255,69,58,.55) inset}
+.score{display:flex;gap:6px}
+.score div{flex:1;background:var(--fill);border-radius:10px;padding:9px;text-align:center;font-size:10.5px;font-weight:500;color:var(--text2)}
+.score div b{display:block;font-size:19px;color:var(--text);font-weight:700}
+.feedback{margin-top:12px;font-size:13px;line-height:1.5;font-weight:500;padding:10px 12px;border-radius:10px;animation:popIn .4s var(--spring)}
+.feedback.ok{background:rgba(48,209,88,.15);color:#7ee09a}.feedback.no{background:rgba(255,69,58,.15);color:#ff8a80}
+.tapcue{background:rgba(0,0,0,.2);border:1px dashed rgba(255,255,255,.2);border-radius:10px;padding:12px;font-size:13px;color:var(--text2)}
+.note{color:var(--text3);font-size:11.5px;line-height:1.5;margin-top:14px}
+
+/* ===== slice bars ===== */
+#slicebar,.cuslice{position:absolute;left:50%;transform:translateX(-50%) translateY(12px);display:flex;align-items:center;gap:10px;border-radius:13px;padding:6px 8px 6px 12px;color:var(--text);font-size:12.5px;font-weight:600;z-index:4;opacity:0;pointer-events:none;transition:opacity .3s var(--ease),transform .45s var(--spring)}
+#slicebar{bottom:96px}.cuslice{bottom:14px}
+#slicebar.on,.cuslice.on{opacity:1;transform:translateX(-50%);pointer-events:auto}
+input[type=range]{-webkit-appearance:none;appearance:none;width:200px;height:4px;border-radius:4px;background:rgba(255,255,255,.2);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#f5f5f7;box-shadow:0 1px 4px rgba(0,0,0,.5),0 0 0 .5px rgba(0,0,0,.2)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#f5f5f7;border:0}
+.seg2{display:flex;background:rgba(0,0,0,.28);border-radius:8px;padding:2px}
+.seg2 button{padding:4px 10px;border-radius:6px;font-size:11.5px;font-weight:600;color:var(--text2);transition:background .25s var(--ease),color .25s}
+.seg2 button.on{background:rgba(255,255,255,.17);color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sb{width:28px;height:28px;border-radius:7px;background:var(--fill2);display:grid;place-items:center;font-size:12px;transition:background .2s}
+.sb:hover{background:rgba(255,255,255,.17)}
+
+/* ===== close-up window ===== */
+#cu{position:fixed;inset:0;background:rgba(0,0,0,0);backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px);z-index:50;display:none;align-items:center;justify-content:center;padding:40px;transition:background .4s var(--ease),backdrop-filter .4s var(--ease)}
+#cu.on{display:flex}
+#cu.show{background:rgba(0,0,0,.35);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.cubox{width:min(1160px,100%);height:min(740px,100%);background:rgba(28,28,32,.82);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);border-radius:14px;overflow:hidden;display:grid;grid-template-columns:1fr 340px;grid-template-rows:38px 1fr;
+  box-shadow:0 0 0 .5px rgba(255,255,255,.16) inset,0 0 0 1px rgba(0,0,0,.6),0 40px 100px rgba(0,0,0,.6);opacity:0;transform:scale(.6);transition:opacity .3s var(--ease),transform .55s var(--spring)}
+#cu.show .cubox{opacity:1;transform:none}
+.cutitle{grid-column:1/3;display:flex;align-items:center;gap:12px;padding:0 14px;background:linear-gradient(rgba(58,58,64,.6),rgba(44,44,50,.6));border-bottom:.5px solid rgba(0,0,0,.55);font-size:13px;font-weight:600;color:var(--text2)}
+.cutitle .lights{margin-right:4px}
+.cuview{position:relative;background:radial-gradient(ellipse at 50% 35%,#22375c 0%,#132140 55%,#0a1222 100%);touch-action:none;overflow:hidden}
+.cuview canvas{display:block;width:100%;height:100%}
+.cutop{position:absolute;left:12px;top:12px;right:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;z-index:2}
+.cubtn{padding:6px 11px;border-radius:9px;font-size:12px;font-weight:600;color:#e5e5ea;transition:background .2s,transform .2s var(--spring)}
+.cubtn:active{transform:scale(.95)}
+.cubtn.on{background:var(--accent)!important;color:#fff}
+.cuhint{position:absolute;left:12px;bottom:14px;color:var(--text3);font-size:11px;pointer-events:none}
+.cuinfo{overflow-y:auto;padding:18px 18px 24px;position:relative;border-left:.5px solid rgba(0,0,0,.6)}
+.cuinfo .x{display:none}
+.cuinfo h3{margin-top:18px}
+.cuinfo h2{font-size:21px}
+.cuinfo>*{animation:panelIn .45s var(--ease) both}
+
+@keyframes panelIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes popIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes dockBounce{0%,100%{transform:translateY(0)}30%{transform:translateY(-14px)}55%{transform:translateY(0)}72%{transform:translateY(-5px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== mobile ===== */
+@media (max-width:900px){
+  body{overflow:auto;background:#0b0f1e}
+  .win{position:static;inset:auto;border-radius:0;display:flex;flex-direction:column;min-height:100%;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;background:#141418}
+  .titlebar{position:sticky;top:0;height:50px;flex:none;padding:0 12px;backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);background:rgba(36,36,40,.82)}
+  .lights,.appname small{display:none}
+  #stage{height:62vh;min-height:380px;flex:none}
+  #panel{overflow:visible;border-left:0}
+  .pad{width:auto;padding:18px 16px 40px}
+  #systems{left:8px;right:8px;transform:none;max-width:none;overflow-x:auto;justify-content:flex-start;scrollbar-width:none;padding:6px 8px 9px;border-radius:18px}
+  #systems::-webkit-scrollbar{display:none}
+  .chip .dot{width:42px;height:42px}
+  .chip .tip{display:none}
+  .chip{flex:none}
+  .tools{right:8px;top:8px}
+  .tool{width:32px;height:32px}.tool span{display:none}
+  .hint{display:none}
+  #slicebar{left:8px;right:8px;transform:translateY(12px);bottom:84px;flex-wrap:wrap}
+  #slicebar.on{transform:none}
+  #slicebar input[type=range]{flex:1;width:auto}
+  #pop{left:8px!important;right:8px;bottom:78px;top:auto!important;width:auto}
+  #pop .pb{max-height:140px}
+  #cu{padding:0}
+  .cubox{border-radius:0;height:100%;grid-template-columns:1fr;grid-template-rows:44px 56vh 1fr}
+  .cutitle{grid-column:1}
+  .cuinfo{border-left:0}
+  .cuslice{left:8px;right:8px;transform:translateY(12px)}.cuslice.on{transform:none}.cuslice input{flex:1;width:auto}
+  .cuhint{display:none}
+}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div class="win" id="win">
+  <div class="titlebar">
+    <div class="lights"><button class="r" id="wClose" title="Go to All systems">×</button><button class="y" id="wMin" title="Hide / show the inspector">−</button><button class="g" id="wMax" title="Full window">+</button></div>
+    <div class="appname"><img src="icons/logo.png" alt=""><span>Corpara</span><small>3D Human Anatomy</small></div>
+    <div class="spacer"></div>
+    <div class="seg" id="sexSeg"><i class="thumb"></i><button data-sex="f">♀ Female</button><button data-sex="m" class="on">♂ Male</button></div>
+  </div>
+  <section id="stage">
+    <div id="labels"></div>
+    <div class="badge glass" id="badge"><img id="badgeIco" alt=""><span></span></div>
+    <div class="tools glass">
+      <button class="tool" id="tReset"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span>Reset view</span></button>
+      <button class="tool" id="tRotate"><svg viewBox="0 0 24 24"><path d="M20.5 13a8.5 8.5 0 0 1-15 4.5"/><path d="M3.5 11a8.5 8.5 0 0 1 15-4.5"/><path d="M19 2.5V7h-4.5"/><path d="M5 21.5V17h4.5"/></svg><span>Auto-rotate</span></button>
+      <button class="tool" id="tXray"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" stroke-dasharray="3 2.6"/><circle cx="12" cy="12" r="3.4"/></svg><span>X-ray (see through)</span></button>
+      <button class="tool" id="tSlice"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg><span>Slice: cut open to see inside</span></button>
+      <button class="tool" id="tLabels"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg><span>Organ labels</span></button>
+      <button class="tool on" id="tSkin"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg><span>Body outline</span></button>
+      <button class="tool" id="tGhost"><svg viewBox="0 0 24 24"><path d="m12 3 9 4.5-9 4.5-9-4.5z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg><span>Show other systems faintly</span></button>
+      <button class="tool" id="tIsolate" style="display:none"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span>Isolate selected organ</span></button>
+      <button class="tool" id="tUnhide" style="display:none"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Show hidden parts</span><b class="n" id="hidN">0</b></button>
+    </div>
+    <div class="hint glass" id="hint">Drag to rotate · Right-drag or two fingers to pan · Scroll or pinch to zoom · Tap any part</div>
+    <div id="loader" class="glass"><div class="row"><i class="spin"></i><span id="loadTxt">Loading…</span></div><div class="bar"><i id="loadBar"></i></div></div>
+    <svg id="leader"><path class="ln"/><circle class="rg" r="6"/><circle class="dt" r="4.5"/><circle class="tip" r="3"/></svg>
+    <div id="pop"></div>
+    <div id="slicebar" class="glass"><span>Slice</span><div class="seg2" id="sliceAx"><button data-ax="z" class="on">Front</button><button data-ax="x">Side</button><button data-ax="y">Top</button></div><input type="range" id="sliceR" min="0" max="1" step="0.002" value="0.5"><button class="sb" id="sliceFlip" title="Flip side">⇄</button><button class="sb" id="sliceX" title="Close">✕</button></div>
+    <nav id="systems" class="glass"></nav>
+  </section>
+  <aside id="panel"><div class="pad" id="content"></div></aside>
+</div>
+<div id="cu"><div class="cubox" id="cuBox">
+  <div class="cutitle"><div class="lights"><button class="r" id="cuClose" title="Close">×</button><button class="y" id="cuMin" title="Close">−</button><button class="g" id="cuMax" title="Zoom">+</button></div><span id="cuWinTitle">Close-up</span></div>
+  <div class="cuview" id="cuView">
+    <div class="cutop"><div class="seg2 glass" id="cuMode"><button data-m="part">This part</button><button data-m="organ">Whole organ</button></div><button class="cubtn glass" id="cuSliceBtn">✂ Cut open</button><button class="cubtn glass" id="cuRot">↻ Rotate</button><button class="cubtn glass" id="cuReset">⟲ Reset</button></div>
+    <div class="cuslice glass" id="cuSlice"><div class="seg2" id="cuAx"><button data-ax="z" class="on">Front</button><button data-ax="x">Side</button><button data-ax="y">Top</button></div><input type="range" id="cuR" min="0" max="1" step="0.002" value="0.5"><button class="sb" id="cuFlip">⇄</button></div>
+    <div class="cuhint">Drag to rotate · scroll to zoom · right-drag to pan · tap a part</div>
+  </div>
+  <div class="cuinfo" id="cuInfo"></div>
+</div></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { SYSTEMS, ORGANS, OTHER_NAMES, PART_FN, MUSCLE_WORDS } from './info.js';
+
+const SYS = Object.fromEntries(SYSTEMS.map(s => [s.id, s]));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const ico = id => `<img class="ico" src="icons/${id}.png" alt="">`;
+
+/* ============ SCENE ============ */
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+stage.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(32, 1, 0.01, 30);
+camera.position.set(0.9, 1.15, 3.6);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.9, 0); controls.enableDamping = true; controls.dampingFactor = 0.06; controls.rotateSpeed = .85;
+controls.minDistance = 0.06; controls.maxDistance = 8; controls.autoRotateSpeed = 1.4; controls.zoomSpeed = 1.2;
+const key = new THREE.DirectionalLight(0xffffff, 1.4); key.position.set(2, 4, 3); scene.add(key);
+const rim = new THREE.DirectionalLight(0xa8c0ff, 0.6); rim.position.set(-3, 2, -3); scene.add(rim);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x223355, 0.35));
+{ const f = new THREE.Mesh(new THREE.CircleGeometry(0.55, 64), new THREE.MeshBasicMaterial({ color: 0x3a5890, transparent: true, opacity: .2 })); f.rotation.x = -Math.PI / 2; f.position.y = -0.002; scene.add(f);
+  const r = new THREE.Mesh(new THREE.RingGeometry(0.54, 0.555, 64), new THREE.MeshBasicMaterial({ color: 0x7f9fd9, transparent: true, opacity: .4 })); r.rotation.x = -Math.PI / 2; r.position.y = -0.001; scene.add(r); }
+
+/* ============ STATE ============ */
+const state = { spot: true, slice: null, sys: 'all', sex: 'm', sel: null, selOrg: null, labels: false, skin: true, ghost: false, xray: false, isolate: false, rotate: false, quiz: null, search: '' };
+let MAN = null; const ORG = {}; const PARTS = []; const loaded = {}; const loading = {};
+const sexOk = x => !x || x === state.sex;
+
+/* ============ COLORS ============ */
+function colorFor(p) {
+  const n = p.n.toLowerCase(), o = p.org, s = p.s;
+  const pick = (re, a, b) => re.test(n) ? a : b;
+  if (s === 'cardiovascular') {
+    if (o === 'heart') return /cavity/.test(n) ? '#5e0f15' : /valve|cusp|leaflet/.test(n) ? '#ead3b4' : /papillary/.test(n) ? '#9e2e2e' : /atrium/.test(n) ? '#b8504a' : '#a8352f';
+    if (/pulmonary (trunk|artery)/.test(n)) return '#3f6fd1';
+    if (/pulmonary vein/.test(n)) return '#cf3030';
+    return /vein|venous|sinus/.test(n) ? '#3460c2' : '#c92f2f';
+  }
+  if (s === 'skeletal') return /cartilage|disc|meniscus|annulus/.test(n) ? '#c6d6da' : o === 'ligaments' ? '#d9ceb4' : '#ece2cc';
+  if (s === 'muscular') return /tendon|linea alba|retinaculum|raphe|tendinous|aponeurosis/.test(n) ? '#e5dccb' : '#a83a34';
+  if (s === 'nervous') {
+    if (o === 'cerebrum') return pick(/white matter/, '#efe4d8', '#e2b0a6');
+    const m = { cerebellum: '#d6968d', brainstem: '#e6bfa9', corpus_callosum: '#f3ece1', limbic: '#d8a0bd', basal_nuclei: '#c99a9a', thalamus: '#d8aaa0', hypothalamus: '#c58bd6', ventricles: '#79b6e6', spinalcord: '#f0dcaa', cranial_nerves: '#f2cc4a', ear: '#e2b59a' };
+    if (m[o]) return m[o];
+    if (o === 'eye') { if (/sclera/.test(n)) return '#f5f3ee'; if (/iris/.test(n)) return '#4c7699'; if (/cornea|chamber/.test(n)) return '#cfe9f6'; if (/lens/.test(n)) return '#eee0a2'; if (/retina/.test(n)) return '#d46d5f'; if (/choroid|corona/.test(n)) return '#7d3d37'; if (/vitreous/.test(n)) return '#d6edf8'; if (/rectus|oblique|levator/.test(n)) return '#a83a34'; if (/lacrimal/.test(n)) return '#e8b49f'; return '#efe9df'; }
+    return '#e6c4b6';
+  }
+  if (s === 'respiratory') {
+    const m = { lungs: '#e8959d', bronchi: '#f0cdbd', trachea: '#eadbd0', nasal: '#e6a49c', pharynx: '#b5524c', diaphragm: '#a9463d' };
+    if (o === 'larynx') return /crico|arytenoid|vocalis|aryepi|thyro-ary/.test(n) && !/cartilage/.test(n) ? '#a83a34' : '#e7ddd0';
+    return m[o] || '#e7c9c0';
+  }
+  if (s === 'digestive') {
+    if (o === 'liver') return /duct|biliary/.test(n) ? '#5f9a45' : '#7a2f24';
+    if (o === 'teeth') return pick(/gingiva/, '#e08a8a', '#f4efe2');
+    if (o === 'mouth') return pick(/tongue|glossus/, '#cf6262', '#e6bd96');
+    if (o === 'pancreas') return pick(/duct/, '#e5d6a8', '#e6bd78');
+    const m = { gallbladder: '#4e8a3a', stomach: '#de8c79', small_int: '#e9a18b', large_int: '#d58c76', rectum: '#c77966', esophagus: '#d27d70' };
+    return m[o] || '#dfa08c';
+  }
+  if (s === 'urinary') return { kidneys: '#8e3b2c', bladder: '#dfab76' }[o] || '#e6d098';
+  if (s === 'integumentary') return o === 'hair' ? '#3a2a1e' : /lip/.test(n) ? '#c97a72' : p.x === 'f' ? '#e7b99e' : '#e0b398';
+  if (s === 'endocrine') return { pituitary: '#c58bd6', pineal: '#b88ad0', adrenals: '#e3b04b' }[o] || '#b48ad6';
+  if (s === 'lymphatic') return { thymus: '#e6c3a8', spleen: '#6e2340', tonsils: '#d27f8a', nodes: '#86c486' }[o] || '#8bc48a';
+  if (s === 'reproductive') {
+    if (o === 'mammary') return /adipose/.test(n) ? '#f2d38c' : /lobe/.test(n) ? '#e5a0a0' : /lactiferous/.test(n) ? '#f5e3c8' : /areola|nipple|tubercle/.test(n) ? '#a8604f' : '#efe6d4';
+    if (o === 'uterus') return /cervi|os$/.test(n) ? '#d48a8f' : '#c8737a';
+    if (o === 'penis') return /glans/.test(n) ? '#cf8878' : /vein|artery/.test(n) ? '#3460c2' : '#d69c86';
+    return { testes: '#ecd3c4', epididymis: '#d6a38f', vas: '#e5d3b5', seminal: '#e0b9a0', prostate: '#c98b7a', ovaries: '#efcfc3', tubes: '#e2a2a8', vagina: '#d98c92' }[o] || '#d9a2a2';
+  }
+  return '#cccccc';
+}
+function hash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967295; }
+const LOOK = {
+  skeletal: { roughness: .62, clearcoat: .1 }, muscular: { roughness: .5, clearcoat: .25, clearcoatRoughness: .5 },
+  integumentary: { roughness: .65, clearcoat: .05 }, default: { roughness: .38, clearcoat: .45, clearcoatRoughness: .35 }
+};
+const ALLMATS = [];
+function makeMat(sys, opts = {}) {
+  const l = LOOK[sys] || LOOK.default;
+  const m = new THREE.MeshPhysicalMaterial({ vertexColors: true, metalness: 0, roughness: l.roughness, clearcoat: l.clearcoat, clearcoatRoughness: l.clearcoatRoughness ?? .4, transparent: false, side: opts.double || (state.slice && !opts.cu) ? THREE.DoubleSide : THREE.FrontSide, envMapIntensity: .9 });
+  m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n  if (!gl_FrontFacing) diffuseColor.rgb *= vec3(0.58, 0.42, 0.42);'); };
+  m.userData.double = !!opts.double; if (!opts.cu) ALLMATS.push(m);
+  return m;
+}
+
+/* ============ ORGANS REGISTRY ============ */
+function getOrg(id, sys) {
+  if (ORG[id]) return ORG[id];
+  const info = ORGANS[id] || { sys, name: OTHER_NAMES[sys] || 'Other structures', loc: '', fn: [], facts: [], other: true };
+  return ORG[id] = { id, ...info, parts: [], meshes: [], sexes: new Set() };
+}
+
+/* ============ LOADING ============ */
+const loaderEl = document.getElementById('loader'), loadTxt = document.getElementById('loadTxt'), loadBar = document.getElementById('loadBar');
+let loadQueue = 0, loadDone = 0;
+function showLoad(txt) { loaderEl.style.display = 'block'; loadTxt.textContent = txt; loadBar.style.width = (loadQueue ? Math.round(loadDone / loadQueue * 100) : 0) + '%'; }
+const DEPS = { endocrine: ['nervous', 'digestive', 'reproductive'] };
+function b64ToBuf(t) { const bin = atob(t.trim()); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; }
+async function fetchBuf(url, label, bytes) {
+  const res = await fetch(url); if (!res.ok) throw new Error(url + ' ' + res.status);
+  if (!res.body || !res.body.getReader) return b64ToBuf(await res.text());
+  const reader = res.body.getReader(); const chunks = []; let got = 0;
+  for (;;) { const { done, value } = await reader.read(); if (done) break; chunks.push(value); got += value.length; loadDone += value.length; showLoad(`Loading ${label}… ${(got / 1e6).toFixed(1)} / ${(bytes / 1e6).toFixed(1)} MB`); }
+  const out = new Uint8Array(got); let o = 0; for (const c of chunks) { out.set(c, o); o += c.length; }
+  return b64ToBuf(new TextDecoder().decode(out));
+}
+function ensureSys(s) {
+  if (s === 'all') return Promise.all(LOAD_ORDER.map(ensureSys));
+  if (loaded[s]) return Promise.resolve();
+  if (loading[s]) return loading[s];
+  const f = MAN.files.find(f => f.s === s);
+  loadQueue += f ? f.bytes : 0;
+  loading[s] = (async () => {
+    await Promise.all((DEPS[s] || []).map(ensureSys));
+    if (f) { const buf = await fetchBuf(f.url, SYS[s].name, f.bytes); buildSystem(s, buf); }
+    buildProcedural(s);
+    loaded[s] = true; buildShares();
+    if (Object.keys(loading).every(k => loaded[k])) { loaderEl.style.display = 'none'; loadQueue = loadDone = 0; }
+    refresh(); computeAnchors();
+  })();
+  return loading[s];
+}
+const LOAD_ORDER = ['integumentary', 'skeletal', 'cardiovascular', 'nervous', 'respiratory', 'digestive', 'urinary', 'reproductive', 'endocrine', 'lymphatic', 'muscular'];
+
+function buildSystem(s, buf) {
+  const sysParts = PARTS.filter(p => p.s === s);
+  const groups = {};
+  for (const p of sysParts) { const shell = /adipose tissue of|^skin|interlobar/.test(p.n.toLowerCase()) && p.org === 'mammary'; const k = p.org + '|' + (p.x || '') + '|' + (shell ? 'shell' : '') + '|' + (p.t ? 't' : ''); (groups[k] ||= []).push(p); }
+  for (const [k, parts] of Object.entries(groups)) {
+    const [orgId, sex, layer, tpl] = k.split('|'); const org = ORG[orgId];
+    const geo = mergeParts(parts, buf);
+    let mesh;
+    if (tpl) {
+      const inst = MAN.nodes; mesh = new THREE.InstancedMesh(geo, makeMat(s), inst.length);
+      const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+      inst.forEach((d, i) => { e.set(d[3], d[4], 0); q.setFromEuler(e); m4.compose(new THREE.Vector3(d[0], d[1], d[2]), q, new THREE.Vector3(d[5], d[5], d[5])); mesh.setMatrixAt(i, m4); });
+      mesh.computeBoundingSphere();
+    } else mesh = new THREE.Mesh(geo, makeMat(s, { double: org.id === 'diaphragm' || layer === 'shell' }));
+    mesh.userData = { org, parts, sex: sex || null, layer, baseOpacity: layer === 'shell' ? .42 : orgId === 'lungs' ? .62 : 1 };
+    for (const p of parts) p.mesh = mesh;
+    org.meshes.push(mesh); scene.add(mesh);
+  }
+}
+function mergeParts(parts, buf) {
+  let V = 0, I = 0; for (const p of parts) { V += p.vc; I += p.ic; }
+  const pos = new Float32Array(V * 3), nrm = new Int8Array(V * 3), col = new Uint8Array(V * 3);
+  const idx = V > 65535 ? new Uint32Array(I) : new Uint16Array(I);
+  const mn = MAN.min, sp = MAN.span; let vo = 0, io = 0; const c = new THREE.Color();
+  for (const p of parts) {
+    const q = new Uint16Array(buf, p.p, p.vc * 3), n = new Int8Array(buf, p.nr, p.vc * 3), ind = p.b ? new Uint32Array(buf, p.i, p.ic) : new Uint16Array(buf, p.i, p.ic);
+    for (let k = 0; k < p.vc * 3; k++) pos[vo * 3 + k] = mn[k % 3] + q[k] / 65535 * sp[k % 3];
+    nrm.set(n, vo * 3);
+    c.set(colorFor(p)); const j = 0.9 + hash(p.n) * 0.2; const r = Math.min(255, c.r * j * 255), g = Math.min(255, c.g * j * 255), b = Math.min(255, c.b * j * 255);
+    for (let k = 0; k < p.vc; k++) { col[(vo + k) * 3] = r; col[(vo + k) * 3 + 1] = g; col[(vo + k) * 3 + 2] = b; }
+    for (let k = 0; k < p.ic; k++) idx[io + k] = ind[k] + vo;
+    p.start = io; p.count = p.ic; vo += p.vc; io += p.ic;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(nrm, 3, true));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3, true));
+  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  g.computeBoundingBox(); g.computeBoundingSphere();
+  return g;
+}
+function buildShares() {
+  for (const o of Object.values(ORG)) {
+    if (!o.share || o.meshes.length) continue;
+    const src = ORG[o.share]; if (!src || !src.meshes.length) continue;
+    for (const m of src.meshes) {
+      const mat = makeMat('endocrine'); mat.vertexColors = false; mat.color.set('#a98ad8');
+      const mm = new THREE.Mesh(m.geometry, mat); mm.userData = { ...m.userData, org: o, baseOpacity: 1 };
+      o.meshes.push(mm); scene.add(mm);
+    }
+  }
+}
+
+/* ============ PROCEDURAL (structures missing from the scan data) ============ */
+function procMesh(org, geo, color, name, { pos, scale, rot, sex, opts } = {}) {
+  const c = new THREE.Color(color); const n = geo.attributes.position.count; const col = new Uint8Array(n * 3);
+  for (let i = 0; i < n; i++) { col[i * 3] = c.r * 255; col[i * 3 + 1] = c.g * 255; col[i * 3 + 2] = c.b * 255; }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3, true));
+  const m = new THREE.Mesh(geo, makeMat(org.sys, opts)); if (pos) m.position.set(...pos); if (scale) m.scale.set(...scale); if (rot) m.rotation.set(...rot);
+  const part = { n: name, s: org.sys, org: org.id, start: 0, count: geo.index.count, x: sex || null, proc: true };
+  m.userData = { org, parts: [part], sex: sex || null, baseOpacity: 1 }; org.meshes.push(m); org.proc = true; scene.add(m); return m;
+}
+function bumpy(g, amp, f) { const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); const k = 1 + amp * Math.sin(x * f) * Math.sin(y * f * 1.3 + 1) * Math.sin(z * f * .9 + .3); p.setXYZ(i, x * k, y * k, z * k); } g.computeVertexNormals(); return g; }
+const built = {};
+function buildProcedural(s) {
+  if (built[s]) return; built[s] = true; const A = MAN.anchors;
+  if (s === 'endocrine' && A['cricoid cartilage']) {
+    const o = getOrg('thyroid', 'endocrine'); const [mn, mx] = A['cricoid cartilage'];
+    const cx = (mn[0] + mx[0]) / 2, y = mn[1] - 0.012, zf = mx[2] - 0.004;
+    for (const sx of [-1, 1]) {
+      procMesh(o, bumpy(new THREE.SphereGeometry(1, 40, 30), .05, 9), '#a8424f', (sx < 0 ? 'Right' : 'Left') + ' lobe of thyroid gland', { pos: [cx + sx * 0.019, y, zf - 0.01], scale: [0.0095, 0.024, 0.0105], rot: [0.15, 0, sx * 0.18] });
+      for (const dy of [0.012, -0.012]) procMesh(o, new THREE.SphereGeometry(0.0028, 16, 12), '#d8b25a', 'Parathyroid gland', { pos: [cx + sx * 0.02, y + dy, zf - 0.02] });
+    }
+    procMesh(o, new THREE.CapsuleGeometry(0.0045, 0.022, 6, 16), '#a8424f', 'Isthmus of thyroid gland', { pos: [cx, y - 0.006, zf + 0.001], rot: [0, 0, Math.PI / 2] });
+  }
+  if (s === 'urinary' && A['urinary bladder']) {
+    const o = getOrg('urethra', 'urinary'); const [mn, mx] = A['urinary bladder'];
+    const cx = (mn[0] + mx[0]) / 2, cz = (mn[2] + mx[2]) / 2;
+    const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(cx, mn[1] + 0.006, cz), new THREE.Vector3(cx, mn[1] - 0.018, cz + 0.006), new THREE.Vector3(cx, mn[1] - 0.04, cz + 0.016)]);
+    procMesh(o, new THREE.TubeGeometry(curve, 20, 0.0035, 10), '#e6d098', 'Urethra (female)', { sex: 'f' });
+  }
+  if (s === 'integumentary') {
+    const O = [0.66, 1.05, 0]; const S = 0.1; const P = (x, y, z) => [O[0] + x * S, O[1] + y * S, O[2] + z * S];
+    const box = (org, size, at, color, name) => procMesh(getOrg(org, 'integumentary'), new THREE.BoxGeometry(size[0] * S, size[1] * S, size[2] * S), color, name, { pos: P(...at) });
+    box('epidermis', [2.4, .24, 2.4], [0, .95, 0], '#efc19f', 'Epidermis'); box('epidermis', [2.4, .04, 2.4], [0, 1.09, 0], '#e0aa82', 'Stratum corneum (dead keratinized cells)');
+    box('dermis', [2.4, .9, 2.4], [0, .375, 0], '#e9988a', 'Dermis');
+    box('hypodermis', [2.4, .8, 2.4], [0, -.475, 0], '#f3d98a', 'Hypodermis (subcutaneous fat)');
+    const tube = (org, pts, r, color, name) => procMesh(getOrg(org, 'integumentary'), new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...P(...p)))), 60, r * S, 8), color, name);
+    tube('dermis', [[-1.2, .3, 1.21], [-.4, .38, 1.21], [.4, .28, 1.21], [1.2, .34, 1.21]], .04, '#cf3a3a', 'Dermal artery'); tube('dermis', [[-1.2, .15, 1.21], [-.4, .1, 1.21], [.4, .2, 1.21], [1.2, .12, 1.21]], .04, '#3d68c9', 'Dermal vein');
+    for (const [x, z] of [[-.6, -.3], [.15, .25], [.75, -.45]]) {
+      const fo = getOrg('follicles', 'integumentary');
+      procMesh(fo, new THREE.SphereGeometry(.09 * S, 16, 12), '#a35c43', 'Hair bulb (living part of the hair)', { pos: P(x, .05, z), scale: [1, 1.6, 1] });
+      procMesh(fo, new THREE.CylinderGeometry(.05 * S, .055 * S, .9 * S, 12), '#c77a5e', 'Hair follicle', { pos: P(x + .025, .5, z) });
+      procMesh(fo, new THREE.CylinderGeometry(.018 * S, .022 * S, 1.9 * S, 8), '#3b2a20', 'Hair shaft', { pos: P(x + .09, 1.0, z), rot: [0, 0, -.1] });
+      procMesh(fo, new THREE.CylinderGeometry(.018 * S, .018 * S, .5 * S, 8), '#b04848', 'Arrector pili muscle (goosebumps)', { pos: P(x + .2, .6, z), rot: [0, 0, -.9] });
+      for (let k = 0; k < 3; k++) procMesh(getOrg('sebaceous', 'integumentary'), new THREE.SphereGeometry(.055 * S, 12, 10), '#e9c65a', 'Sebaceous gland', { pos: P(x - .12 - k * .03, .6 + k * .07, z + .04 * (k - 1)) });
+    }
+    for (const [x, z] of [[-.1, .6], [.5, -.1]]) {
+      const pts = []; for (let i = 0; i <= 40; i++) { const a = i / 40 * Math.PI * 6; pts.push([x + Math.cos(a) * .09, i * .004, z + Math.sin(a) * .09]); } pts.push([x, .3, z], [x + .05, .7, z], [x, 1.1, z]);
+      tube('sweat', pts, .022, '#6fa8dc', 'Sweat gland & duct');
+    }
+  }
+}
+
+/* ============ VISIBILITY ============ */
+function inFocus(o) {
+  if (o.inset) return state.sys === 'integumentary';
+  if (o.sys === 'integumentary') return state.sys === 'integumentary';
+  return state.sys === 'all' || o.sys === state.sys;
+}
+function applyOp(m) {
+  const op = m.userData.cOp, mat = m.material; const tr = op < .999;
+  if (mat.transparent !== tr) { mat.transparent = tr; mat.needsUpdate = true; }
+  mat.opacity = op; mat.depthWrite = op > .5; m.renderOrder = op < .1 ? 2 : tr ? 1 : 0;
+}
+function stepFades(dt) {
+  const k = 1 - Math.exp(-dt * 9);
+  for (const o of Object.values(ORG)) for (const m of o.meshes) {
+    const t = m.userData.tOp ?? 1, c = m.userData.cOp ?? t; if (c === t && (t > 0 || !m.visible)) continue;
+    let n = c + (t - c) * k; if (Math.abs(t - n) < .004) n = t; m.userData.cOp = n;
+    if (n <= 0.001 && t === 0) { m.visible = false; continue; }
+    applyOp(m);
+  }
+}
+let lastSys = null;
+function refresh() {
+  if (lastSys !== state.sys) { lastSys = state.sys; const bd = document.getElementById('badge'); bd.classList.remove('bump'); void bd.offsetWidth; bd.classList.add('bump'); setTimeout(() => bd.classList.remove('bump'), 500); }
+  for (const o of Object.values(ORG)) {
+    const f = inFocus(o);
+    for (const m of o.meshes) {
+      const sx = sexOk(m.userData.sex); let vis = sx && (f || (state.ghost && !o.inset && o.sys !== 'integumentary'));
+      let op = m.userData.baseOpacity;
+      const skinCtx = state.skin && o.sys === 'integumentary' && !o.inset && o.id === 'skin' && state.sys !== 'integumentary';
+      if (skinCtx && sx) { vis = true; op = 0.07; }
+      if (state.isolate && state.selOrg) vis = o === state.selOrg && sx;
+      if (!f && !skinCtx) op = 0.06;
+      else if (f && state.xray && !(state.isolate && o === state.selOrg)) op = Math.min(op, o.sys === 'skeletal' ? .35 : .3);
+      if (f && state.sys === 'all' && o.sys === 'muscular' && !state.isolate) op = Math.min(op, .35);
+      if (f && state.selOrg && state.spot && !state.isolate && o !== state.selOrg) op = Math.min(op, .16);
+      m.userData.pickable = vis && f; m.userData.tOp = vis ? op : 0;
+      if (m.userData.cOp === undefined) { m.userData.cOp = 0; }
+      if (vis && !m.visible) { m.visible = true; applyOp(m); }
+    }
+  }
+  if (hl) hl.visible = !!(state.sel && state.sel.mesh && state.sel.mesh.visible);
+  const b = document.getElementById('badge'); const s = state.sys === 'all' ? { name: 'All systems', color: '#fff' } : SYS[state.sys];
+  document.getElementById('badgeIco').src = 'icons/' + state.sys + '.png'; b.querySelector('span').textContent = s.name + (state.sys === 'all' ? '' : ' system');
+  document.getElementById('tIsolate').style.display = state.selOrg ? 'grid' : 'none';
+  document.getElementById('tIsolate').classList.toggle('on', state.isolate);
+  if (state.slice && typeof syncMainCaps === 'function') syncMainCaps();
+  const nh = hiddenParts.size; document.getElementById('tUnhide').style.display = nh ? 'grid' : 'none'; document.getElementById('hidN').textContent = nh;
+}
+
+/* ============ CAMERA ============ */
+let tween = null;
+function flyToBox(box, pad = 1.2) {
+  if (box.isEmpty()) return; const sph = box.getBoundingSphere(new THREE.Sphere());
+  const r = Math.max(sph.radius * pad, 0.03); const fov = THREE.MathUtils.degToRad(camera.fov);
+  const half = Math.atan(Math.tan(fov / 2) * Math.min(1, camera.aspect)); const dist = r / Math.sin(half);
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  tween = { t0: performance.now(), dur: 1000, fromP: camera.position.clone(), fromT: controls.target.clone(), toT: sph.center.clone(), toP: sph.center.clone().addScaledVector(dir, dist) };
+}
+function boxOf(list) { const b = new THREE.Box3(); for (const o of list) for (const m of o.meshes) if (m.visible && (m.userData.tOp ?? 1) > 0 && sexOk(m.userData.sex)) { m.updateMatrixWorld(); if (m.isInstancedMesh) { if (!m.boundingBox) m.computeBoundingBox(); b.union(m.boundingBox); continue; } if (!m.geometry.boundingBox) m.geometry.computeBoundingBox(); b.union(m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld)); } return b; }
+function partBox(p) { const g = p.mesh.geometry, pos = g.attributes.position, idx = g.index.array, b = new THREE.Box3(), v = new THREE.Vector3(); for (let i = p.start; i < p.start + p.count; i++) { v.fromBufferAttribute(pos, idx[i]); b.expandByPoint(v); } return b.applyMatrix4(p.mesh.matrixWorld); }
+function frameCurrent() {
+  if (state.selOrg) return flyToBox(boxOf([state.selOrg]), 1.4);
+  const list = Object.values(ORG).filter(o => inFocus(o) && o.meshes.length);
+  const b = boxOf(list); if (state.sys === 'all' || b.isEmpty()) { flyToBox(new THREE.Box3(new THREE.Vector3(-.3, 0, -.15), new THREE.Vector3(.3, 1.75, .15)), 1.0); } else flyToBox(b, 1.15);
+}
+function resetView() { const d = camera.position.distanceTo(controls.target); camera.position.copy(controls.target).add(new THREE.Vector3(.25, .1, 1).normalize().multiplyScalar(d)); frameCurrent(); }
+
+/* ============ HIGHLIGHT & HIDE ============ */
+let hl = null;
+const hlMat = new THREE.MeshStandardMaterial({ color: 0x9fe6ff, emissive: 0x1fa8ff, emissiveIntensity: .9, transparent: true, opacity: .62, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+const olTh = { value: .002 };
+const olMat = new THREE.MeshBasicMaterial({ color: 0xffd23f, side: THREE.BackSide, transparent: true, opacity: .95, depthWrite: false });
+olMat.onBeforeCompile = sh => { sh.uniforms.th = olTh; sh.vertexShader = 'uniform float th;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed += normalize(normal) * th;'); };
+const ghostHl = new THREE.MeshBasicMaterial({ color: 0x5fd0ff, transparent: true, opacity: .28, depthTest: false, depthWrite: false });
+function partGeo(p, withColor) {
+  const src = p.mesh.geometry; const g = new THREE.BufferGeometry();
+  g.setAttribute('position', src.attributes.position); g.setAttribute('normal', src.attributes.normal); if (withColor && src.attributes.color) g.setAttribute('color', src.attributes.color);
+  const orig = p.mesh.userData.origIndex || src.index.array;
+  g.setIndex(new THREE.BufferAttribute(orig.slice(p.start, p.start + p.count), 1)); g.computeBoundingBox(); g.computeBoundingSphere();
+  return g;
+}
+function setHighlight(p) {
+  if (hl) { scene.remove(hl); hl.children[0].geometry.dispose(); hl = null; }
+  if (!p || !p.mesh) return;
+  const g = partGeo(p); hl = new THREE.Group();
+  const size = g.boundingSphere.radius; olTh.value = Math.min(.004, Math.max(.0009, size * .045));
+  const mk = mat => { let m; if (p.mesh.isInstancedMesh) { m = new THREE.InstancedMesh(g, mat, p.mesh.count); for (let i = 0; i < p.mesh.count; i++) { const m4 = new THREE.Matrix4(); p.mesh.getMatrixAt(i, m4); m.setMatrixAt(i, m4); } } else m = new THREE.Mesh(g, mat); return m; };
+  const fill = mk(hlMat); fill.renderOrder = 5; const ghostM = mk(ghostHl); ghostM.renderOrder = 7; hl.add(fill, ghostM);
+  if (!p.mesh.isInstancedMesh) { const ol = mk(olMat); ol.renderOrder = 6; hl.add(ol); }
+  hl.position.copy(p.mesh.position); hl.rotation.copy(p.mesh.rotation); hl.scale.copy(p.mesh.scale);
+  scene.add(hl);
+}
+const hiddenParts = new Set();
+function hidePart(p) {
+  const m = p.mesh; const ix = m.geometry.index; if (!m.userData.origIndex) m.userData.origIndex = ix.array.slice();
+  const first = ix.array[p.start]; ix.array.fill(first, p.start, p.start + p.count); ix.needsUpdate = true; hiddenParts.add(p);
+}
+function unhideAll() { for (const p of hiddenParts) { const m = p.mesh, ix = m.geometry.index; ix.array.set(m.userData.origIndex.subarray(p.start, p.start + p.count), p.start); ix.needsUpdate = true; } hiddenParts.clear(); refresh(); }
+
+/* ============ PICKING ============ */
+const ray = new THREE.Raycaster(); const ptr = new THREE.Vector2(); let down = null;
+renderer.domElement.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!down) return; const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y); down = null; if (moved > 7) return;
+  const r = renderer.domElement.getBoundingClientRect(); ptr.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+  ray.setFromCamera(ptr, camera);
+  const cands = []; for (const o of Object.values(ORG)) for (const m of o.meshes) if (m.visible && m.userData.pickable) cands.push(m);
+  const hits = ray.intersectObjects(cands, false).filter(h => h.material === undefined || true);
+  let hit = null;
+  for (const h of hits) { if (state.slice && clipPlane.distanceToPoint(h.point) < 0) continue; const p = partAt(h.object, h.faceIndex); if (!p || hiddenParts.has(p)) continue; // see-through layers: skip faint shells
+    if (h.object.material.opacity < .5 && hits.some(o => o !== h && o.object.material.opacity >= .5)) continue; hit = { p, org: h.object.userData.org, point: h.point }; break; }
+  if (state.quiz && state.quiz.q && state.quiz.q.type === 'tap' && !state.quiz.answered) { if (hit) answerTap(hit.org); return; }
+  if (hit) { const dbl = lastTap && lastTap.p === hit.p && performance.now() - lastTap.t < 420; lastTap = { p: hit.p, t: performance.now() }; if (dbl) { openCloseup(hit.p, hit.org, 'part'); return; } selectPart(hit.p, hit.org, { x: e.clientX - r.left, y: e.clientY - r.top, w: hit.point.clone() }); } else closePop(true);
+});
+let lastTap = null;
+function partAt(mesh, face) {
+  const ps = mesh.userData.parts; const t = face * 3; let lo = 0, hi = ps.length - 1;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (ps[mid].start <= t) lo = mid; else hi = mid - 1; }
+  const p = ps[lo]; if (p) p.mesh = p.mesh && p.mesh.userData.org === mesh.userData.org ? p.mesh : mesh; return p;
+}
+
+/* ============ POPUP ============ */
+const pop = document.getElementById('pop');
+function partFunction(p, org) {
+  const n = p.n.toLowerCase(); const out = [];
+  if (!(org.share)) for (const [re, t] of PART_FN) if (re.test(n)) { out.push({ t, key: true }); break; }
+  const ofn = org.fn || [];
+  for (const t of ofn.slice(0, out.length ? 2 : 3)) out.push({ t });
+  if (!out.length) {
+    const g = { skeletal: 'Bone: supports the body, protects organs, stores calcium and makes blood cells in red marrow.', muscular: 'Skeletal muscle: contracts to pull on bones, producing movement and holding posture.', nervous: 'Part of the nervous system: carries or processes nerve signals.', cardiovascular: 'Blood vessel: part of the network that carries blood around the body.', respiratory: 'Part of the airway that moves air to and from the lungs.', digestive: 'Part of the digestive tract or its accessory organs.' }[org.sys];
+    if (g) out.push({ t: g, key: true });
+  }
+  return out;
+}
+function decodeMuscle(n) { n = n.toLowerCase(); const hits = MUSCLE_WORDS.filter(([w]) => new RegExp('(^|[^a-z])' + w).test(n)); if (!hits.length) return ''; return 'Name clues: ' + hits.slice(0, 4).map(([w, m]) => `<b>${w}</b> = ${m}`).join(' · '); }
+function openPop(p, org, at) {
+  const sys = SYS[org.sys]; pop.style.setProperty('--c', sys.color);
+  const fns = partFunction(p, org);
+  const orgName = org.other ? sys.name + ' system' : org.name + ' · ' + sys.name + ' system';
+  const dec = org.sys === 'muscular' || /rectus|oblique|levator/.test(p.n.toLowerCase()) ? decodeMuscle(p.n) : '';
+  pop.innerHTML = `<div class="ph"><div class="tag">${ico(sys.id)}${esc(sys.name)}</div><h4>${esc(cap(p.n))}</h4><div class="org">${esc(orgName)}</div><button class="x" id="px">✕</button></div>
+   <div class="pb"><div class="lab">Function</div><ul>${fns.map(f => `<li class="${f.key ? 'key' : ''}">${esc(f.t)}</li>`).join('')}</ul>${dec ? `<div class="decode">${dec}</div>` : ''}</div>
+   <div class="pa top"><button class="primary" id="pc">🔍 Close-up</button><button class="alt" id="ps">✂ See inside</button></div>
+   <div class="pa"><button id="pm">Learn more</button><button id="ph">Hide</button><button id="pi">${state.isolate ? 'Show all' : 'Isolate'}</button></div>`;
+  const wasOpen = pop.classList.contains('show'); pop.style.display = 'block'; if (!wasOpen) { pop.classList.remove('show'); void pop.offsetWidth; requestAnimationFrame(() => pop.classList.add('show')); }
+  pop.classList.remove('glide'); placePop(true); requestAnimationFrame(() => pop.classList.add('glide'));
+  document.getElementById('px').onclick = () => closePop(true);
+  document.getElementById('pm').onclick = () => { renderPanel(); if (innerWidth <= 900) document.getElementById('panel').scrollIntoView({ behavior: 'smooth' }); };
+  document.getElementById('ph').onclick = () => { hidePart(p); closePop(true); };
+  document.getElementById('pc').onclick = () => openCloseup(p, org, 'part');
+  document.getElementById('ps').onclick = () => openCloseup(p, org, org.other ? 'part' : 'organ', true);
+  document.getElementById('pi').onclick = () => { toggleIsolate(); openPop(p, org, null); };
+}
+function toScreen(v) { const q = v.clone().project(camera); return { x: (q.x * .5 + .5) * stage.clientWidth, y: (-q.y * .5 + .5) * stage.clientHeight, behind: q.z > 1 }; }
+function selRect() {
+  const b = state.selBox; if (!b) { const a = state.anchorW ? toScreen(state.anchorW) : null; return a ? { l: a.x - 12, t: a.y - 12, r: a.x + 12, b: a.y + 12 } : null; }
+  let l = 1e9, t = 1e9, r = -1e9, bt = -1e9;
+  for (let i = 0; i < 8; i++) { const c = toScreen(new THREE.Vector3(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z)); l = Math.min(l, c.x); r = Math.max(r, c.x); t = Math.min(t, c.y); bt = Math.max(bt, c.y); }
+  return { l, t, r, b: bt };
+}
+const ovl = (a, b) => Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t));
+function placePop(initial) {
+  if (innerWidth <= 900 || !state.anchorW) { if (innerWidth > 900 && initial) { pop.style.left = '14px'; pop.style.top = '64px'; } return; }
+  const W = stage.clientWidth, H = stage.clientHeight, pw = pop.offsetWidth, ph = pop.offsetHeight;
+  const a = toScreen(state.anchorW), R = selRect() || { l: a.x, t: a.y, r: a.x, b: a.y };
+  const box = { l: 14, t: 64, r: W - 66, b: H - 96 }; const M = 46;
+  const cx = (x) => Math.max(box.l, Math.min(x, box.r - pw)), cy = (y) => Math.max(box.t, Math.min(y, box.b - ph));
+  const cands = [
+    { x: R.r + M, y: a.y - ph * .4 }, { x: R.l - M - pw, y: a.y - ph * .4 },
+    { x: a.x - pw / 2, y: R.t - M - ph }, { x: a.x - pw / 2, y: R.b + M },
+    { x: a.x + M, y: a.y - ph * .4 }, { x: a.x - M - pw, y: a.y - ph * .4 },
+    { x: box.l, y: box.t }, { x: box.r - pw, y: box.t }, { x: box.l, y: box.b - ph }, { x: box.r - pw, y: box.b - ph }];
+  const near = { l: a.x - 26, t: a.y - 26, r: a.x + 26, b: a.y + 26 };
+  let best = null, bs = 1e18;
+  for (const c of cands) {
+    const x = cx(c.x), y = cy(c.y), pr = { l: x, t: y, r: x + pw, b: y + ph };
+    const sc = ovl(pr, near) * 400 + ovl(pr, R) * 3 + Math.hypot(x + pw / 2 - a.x, y + ph / 2 - a.y) * 4;
+    if (sc < bs) { bs = sc; best = { x, y }; }
+  }
+  pop.style.left = best.x + 'px'; pop.style.top = best.y + 'px';
+  pop.style.transformOrigin = `${Math.max(0, Math.min(pw, a.x - best.x))}px ${Math.max(0, Math.min(ph, a.y - best.y))}px`;
+}
+const leader = document.getElementById('leader'); let lastCheck = 0, dragging = false;
+renderer.domElement.addEventListener('pointerdown', () => { dragging = true; });
+addEventListener('pointerup', () => { dragging = false; });
+function updateLeader(now) {
+  const open = pop.classList.contains('show') && state.anchorW && state.sel;
+  leader.classList.toggle('on', !!open); if (!open) return;
+  const a = toScreen(state.anchorW); const sr = stage.getBoundingClientRect(), pr = pop.getBoundingClientRect();
+  const P = { l: pr.left - sr.left, t: pr.top - sr.top, r: pr.right - sr.left, b: pr.bottom - sr.top };
+  const off = a.behind || a.x < 0 || a.y < 0 || a.x > sr.width || a.y > sr.height;
+  const inside = a.x > P.l && a.x < P.r && a.y > P.t && a.y < P.b;
+  leader.style.opacity = off || inside ? 0 : '';
+  if (!off && !inside) {
+    const sx = Math.max(P.l, Math.min(a.x, P.r)), sy = Math.max(P.t + 16, Math.min(a.y, P.b - 16));
+    let x0 = sx, y0 = sy; if (a.x > P.l && a.x < P.r) { x0 = Math.max(P.l + 20, Math.min(a.x, P.r - 20)); y0 = a.y < P.t ? P.t : P.b; } else { x0 = a.x < P.l ? P.l : P.r; }
+    const horiz = x0 === P.l || x0 === P.r; const k = .5;
+    const c1 = horiz ? [x0 + (a.x - x0) * k, y0] : [x0, y0 + (a.y - y0) * k], c2 = horiz ? [x0 + (a.x - x0) * k, a.y] : [a.x, y0 + (a.y - y0) * k];
+    leader.querySelector('.ln').setAttribute('d', `M${x0},${y0} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${a.x},${a.y}`);
+    for (const c of leader.querySelectorAll('.dt,.rg')) { c.setAttribute('cx', a.x); c.setAttribute('cy', a.y); }
+    const t = leader.querySelector('.tip'); t.setAttribute('cx', x0); t.setAttribute('cy', y0);
+  }
+  if (!dragging && !tween && now - lastCheck > 350 && innerWidth > 900) { lastCheck = now;
+    const near = { l: a.x - 30, t: a.y - 30, r: a.x + 30, b: a.y + 30 }; if (!off && ovl(P, near) > 0) placePop(false); }
+}
+function closePop(deselect) { leader.classList.remove('on'); pop.classList.remove('show'); setTimeout(() => { if (!pop.classList.contains('show')) pop.style.display = 'none'; }, 260); if (deselect && state.sel) { state.sel = null; state.selOrg = null; state.isolate = false; setHighlight(null); refresh(); renderPanel(); } }
+
+/* ============ SELECTION ============ */
+function selectPart(p, org, at, fly = false) {
+  if (!inFocus(org)) { state.sys = org.inset ? 'integumentary' : org.sys; renderNav(); }
+  state.sel = p; state.selOrg = org; if (state.quiz) state.quiz = null;
+  state.selBox = p.mesh && !p.mesh.isInstancedMesh ? partBox(p) : null;
+  state.anchorW = at && at.w ? at.w : state.selBox ? state.selBox.getCenter(new THREE.Vector3()) : null;
+  refresh(); setHighlight(p); openPop(p, org, at); renderPanel();
+  if (fly) flyToBox(partBox(p), 2.2);
+}
+async function selectOrgan(o) {
+  await ensureSys(o.sys);
+  if (!inFocus(o)) { state.sys = o.inset ? 'integumentary' : o.sys; renderNav(); }
+  const ms = o.meshes.filter(m => sexOk(m.userData.sex)); if (!ms.length) return;
+  const p = ms[0].userData.parts[0]; p.mesh = ms[0];
+  state.sel = p; state.selOrg = o; state.isolate = false; if (state.quiz) state.quiz = null;
+  refresh(); setHighlight(null); flyToBox(boxOf([o]), 1.4); renderPanel(); closePop(false); if (state.slice) applySlice(true);
+}
+function toggleIsolate() { if (!state.selOrg) return; state.isolate = !state.isolate; refresh(); flyToBox(boxOf(state.isolate ? [state.selOrg] : Object.values(ORG).filter(inFocus)), state.isolate ? 1.4 : 1.15); renderPanel(); }
+async function selectSystem(id) {
+  const chip = [...nav.querySelectorAll('.chip')].find(c => c.dataset.id === id);
+  bounceId = id; setTimeout(() => { bounceId = null; }, 700); state.sys = id; state.sel = null; state.selOrg = null; state.isolate = false; setHighlight(null); closePop(false);
+  if (state.quiz) state.quiz.scope = id;
+  renderNav(); refresh(); state.quiz ? nextQ() : renderPanel();
+  await ensureSys(id === 'all' ? 'all' : id); if (state.skin) ensureSys('integumentary');
+  if (state.sys === id) { refresh(); frameCurrent(); if (state.slice) applySlice(true); }
+}
+
+/* ============ LABELS ============ */
+const labelsEl = document.getElementById('labels'); const tmpV = new THREE.Vector3();
+function computeAnchors() { for (const o of Object.values(ORG)) { if (!o.meshes.length) continue; const b = boxOf([o]); if (!b.isEmpty()) { o.anchor = b.getCenter(new THREE.Vector3()); if (!o.lbl) { const d = document.createElement('div'); d.className = 'lbl'; d.textContent = o.name; d.onclick = () => selectOrgan(o); labelsEl.appendChild(d); o.lbl = d; } } } }
+function updateLabels() {
+  const placed = [];
+  const w = stage.clientWidth, h = stage.clientHeight; const tapQ = state.quiz && state.quiz.q && state.quiz.q.type === 'tap' && !state.quiz.answered;
+  const lorder = Object.values(ORG); if (state.selOrg) { lorder.splice(lorder.indexOf(state.selOrg), 1); lorder.unshift(state.selOrg); }
+  for (const o of lorder) { if (!o.lbl) continue;
+    const show = state.labels && !tapQ && !o.other && inFocus(o) && o.meshes.some(m => m.visible && sexOk(m.userData.sex)) && (state.sys !== 'all') && (!state.isolate || o === state.selOrg);
+    if (!show) { o.lbl.style.display = 'none'; continue; }
+    tmpV.copy(o.anchor).project(camera); if (tmpV.z > 1) { o.lbl.style.display = 'none'; continue; }
+    const lx = (tmpV.x * .5 + .5) * w, ly = (-tmpV.y * .5 + .5) * h; const pv = pop.classList.contains('show'); const pl = pv ? parseFloat(pop.style.left) : 0, pt = pv ? parseFloat(pop.style.top) : 0; const lw = o.name.length * 6.3 + 18, rr = { l: lx - lw / 2, r: lx + lw / 2, t: ly - 11, b: ly + 11 }; const clash = placed.some(q => q.l < rr.r && q.r > rr.l && q.t < rr.b && q.b > rr.t); if (clash && o !== state.selOrg) { o.lbl.style.display = 'none'; continue; } placed.push(rr); o.lbl.style.opacity = pv && lx > pl - 60 && lx < pl + pop.offsetWidth + 60 && ly > pt - 14 && ly < pt + pop.offsetHeight + 14 ? .15 : ''; o.lbl.style.display = 'block'; o.lbl.style.transform = `translate(${(tmpV.x * .5 + .5) * w}px,${(-tmpV.y * .5 + .5) * h}px) translate(-50%,-50%)`;
+  }
+}
+
+/* ============ NAV & PANEL ============ */
+const nav = document.getElementById('systems'), content = document.getElementById('content'); let bounceId = null;
+nav.addEventListener('mousemove', dockMagnify); nav.addEventListener('mouseleave', () => dockMagnify(null));
+new MutationObserver(() => { content.classList.remove('in'); void content.offsetWidth; content.classList.add('in'); }).observe(content, { childList: true });
+function dockMagnify(e) {
+  if (innerWidth <= 900) return; const chips = [...nav.querySelectorAll('.chip')];
+  for (const c of chips) { const r = c.getBoundingClientRect(); const d = e ? Math.abs(e.clientX - (r.left + r.width / 2)) : 999; const s = 1 + .55 * Math.max(0, Math.cos(Math.min(1, d / 150) * Math.PI / 2)); c.style.setProperty('--s', s.toFixed(3)); }
+}
+function renderNav() {
+  nav.innerHTML = '';
+  [{ id: 'all', name: 'All systems', icon: '🧍', color: '#fff' }, ...SYSTEMS].forEach(s => {
+    const b = document.createElement('button'); b.className = 'chip' + (state.sys === s.id ? ' on' : '') + (bounceId === s.id ? ' bounce' : ''); b.dataset.id = s.id; b.style.setProperty('--c', s.color);
+    b.innerHTML = `<span class="dot img">${ico(s.id)}</span><span class="tip">${s.name}</span><i class="run"></i>`; b.title = ''; b.onclick = () => selectSystem(s.id); nav.appendChild(b);
+    if (state.sys === s.id && innerWidth <= 900) setTimeout(() => b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }), 30);
+  });
+}
+const setAccent = c => document.getElementById('panel').style.setProperty('--c', c);
+const sysOrgans = id => Object.values(ORG).filter(o => o.sys === id && !o.other && (o.proc || o.share || o.parts.some(p => sexOk(p.x))) && sexOk(o.sex)).concat(Object.values(ORG).filter(o => o.sys === id && o.other && o.parts.some(p => sexOk(p.x))));
+function renderPanel() { if (state.quiz) return renderQuiz(); if (state.selOrg) return renderOrgan(state.selOrg); if (state.sys === 'all') return renderHome(); renderSystem(SYS[state.sys]); }
+function searchBox() { return `<div class="search"><input id="q" placeholder="Search ${PARTS.length.toLocaleString()} structures (e.g. femur, iris, aorta)" value="${esc(state.search)}"></div><div class="results" id="res"></div>`; }
+function wireSearch() {
+  const inp = document.getElementById('q'), res = document.getElementById('res'); if (!inp) return;
+  const run = () => { state.search = inp.value; const q = inp.value.trim().toLowerCase(); if (q.length < 2) { res.innerHTML = ''; return; }
+    const seen = new Set(); const hits = [];
+    const scored = [];
+    for (const p of PARTS) { if (!sexOk(p.x) || p.t) continue; const nm = p.n.toLowerCase(); const on = (ORG[p.org].name || '').toLowerCase(); if (!(nm.includes(q) || on.includes(q))) continue; if (seen.has(nm)) continue; seen.add(nm);
+      let sc = 0; if (nm === q) sc -= 50; if (new RegExp('\\b' + q.replace(/[.*+?^${}()|[\]\\]/g, '')).test(nm)) sc -= 10; if (on.includes(q)) sc -= 6; if (/artery|vein|branch|tributary|venous/.test(nm) && !/artery|vein|vessel/.test(q)) sc += 20; sc += nm.length / 40; scored.push([sc, p]); }
+    scored.sort((a, b) => a[0] - b[0]); for (const [, p] of scored.slice(0, 15)) hits.push(p);
+    res.innerHTML = hits.length ? hits.map((p, i) => `<button class="res" data-i="${PARTS.indexOf(p)}" style="--pc:${SYS[p.s].color}"><i></i>${esc(cap(p.n))}<small>${esc(ORG[p.org].other ? SYS[p.s].name : ORG[p.org].name)}</small></button>`).join('') : '<p class="note">No matches.</p>';
+    res.querySelectorAll('.res').forEach(b => b.onclick = async () => { const p = PARTS[+b.dataset.i]; await ensureSys(p.s); if (!p.mesh) p.mesh = ORG[p.org].meshes.find(m => m.userData.parts.includes(p)); state.sys = ORG[p.org].sys; renderNav(); selectPart(p, ORG[p.org], null, true); }); };
+  inp.oninput = run; run();
+}
+function renderHome() {
+  setAccent('#9b7fd1');
+  content.innerHTML = `<div class="eyebrow"><i></i>Human body</div><h2>11 organ systems, one body</h2>
+  <p class="lead">Explore a realistic 3D body built from real anatomical scan data. <b>Tap any structure</b> to see what it is and what it does. Choose a system to focus on it.</p>
+  ${searchBox()}
+  <h3>Organ systems</h3>
+  <div class="sysgrid">${SYSTEMS.map(s => `<button class="card" data-sys="${s.id}" style="--c:${s.color}"><span class="dot img">${ico(s.id)}</span><span>${s.name}<small>${sysOrgans(s.id).filter(o => !o.other).length} organs · ${PARTS.filter(p => p.s === s.id && sexOk(p.x)).length} parts</small></span></button>`).join('')}</div>
+  <div class="btns"><button class="btn primary" id="startQuiz">🎯 Quiz me on all systems</button></div>
+  <div class="fact"><b>Tips</b>Pick a system from the Dock at the bottom. Tap any part for its function, double-tap for a close-up, and use the toolbar on the right for X-ray, Slice, labels and more. The yellow window button hides this panel.</div>
+  <p class="note">3D data: BodyParts3D © The Database Center for Life Science (CC BY 4.0) and the HuBMAP Human Reference Atlas female organ set, by K. Browne &amp; H. Schlehlein (CC BY 4.0), simplified and aligned for this viewer. The thyroid and skin cross-section are illustrations. The female organs come from a different reference body, so they are approximate fits.</p>`;
+  content.querySelectorAll('[data-sys]').forEach(b => b.onclick = () => selectSystem(b.dataset.sys));
+  document.getElementById('startQuiz').onclick = startQuiz; wireSearch();
+}
+function renderSystem(s) {
+  setAccent(s.color); const orgs = sysOrgans(s.id);
+  content.innerHTML = `<button class="back" id="bk">← All systems</button><div class="eyebrow"><i></i>Organ system</div><h2><span class="dot img hico" style="border-radius:11px">${ico(s.id)}</span>${s.name} System</h2>
+  <p class="lead">${esc(s.summary)}</p>${searchBox()}
+  <h3>Main functions</h3><ul class="list">${s.fn.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
+  <h3>Organs &amp; structures · tap to view</h3>
+  <div class="grid">${orgs.map(o => `<button class="card" data-org="${o.id}">${esc(o.name)}${o.parts.length > 1 ? `<small>${o.parts.filter(p => sexOk(p.x) && !p.t).length || ''} parts</small>` : ''}</button>`).join('')}</div>
+  <h3>Works closely with</h3><div class="pills">${s.works.map(w => `<button class="pill" data-sys="${w}" style="--pc:${SYS[w].color}"><i></i>${SYS[w].name}</button>`).join('')}</div>
+  <div class="fact"><b>Did you know?</b>${esc(s.fact)}</div>
+  <div class="btns"><button class="btn primary" id="startQuiz">🎯 Quiz: ${s.name} system</button></div>`;
+  document.getElementById('bk').onclick = () => selectSystem('all');
+  content.querySelectorAll('[data-org]').forEach(b => b.onclick = () => selectOrgan(ORG[b.dataset.org]));
+  content.querySelectorAll('[data-sys]').forEach(b => b.onclick = () => selectSystem(b.dataset.sys));
+  document.getElementById('startQuiz').onclick = startQuiz; wireSearch();
+}
+function renderOrgan(o) {
+  const s = SYS[o.sys]; setAccent(s.color); const list = sysOrgans(o.sys).filter(x => !x.other); const i = list.indexOf(o);
+  const prev = list[(i - 1 + list.length) % list.length], next = list[(i + 1) % list.length];
+  const parts = [...new Set(o.parts.filter(p => sexOk(p.x) && !p.t).map(p => p.n))];
+  content.innerHTML = `<button class="back" id="bk">← ${s.name} system</button><div class="eyebrow"><i></i>${s.name} system</div><h2>${esc(o.name)}</h2>
+  ${state.sel && state.sel.n && state.selOrg === o ? `<div class="selpart">📌 Selected: ${esc(cap(state.sel.n))}</div>` : ''}
+  ${o.loc ? `<div class="where">📍 <span>${esc(o.loc)}</span></div>` : ''}
+  ${o.fn.length ? `<h3>Functions</h3><ul class="list">${o.fn.map(f => `<li>${esc(f)}</li>`).join('')}</ul>` : `<p class="lead" style="margin-top:8px">A collection of smaller ${s.name.toLowerCase()} structures. Tap any of them on the model to see its name and function.</p>`}
+  ${o.facts.length ? `<h3>Key facts</h3><ul class="list">${o.facts.map(f => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
+  <div class="btns"><button class="btn primary" id="cuo">🔍 Close-up view</button><button class="btn" id="cui">✂ See inside</button><button class="btn" id="iso">${state.isolate ? 'Show whole system' : '◎ Isolate'}</button><button class="btn" id="foc">⌖ Zoom</button></div>
+  ${parts.length > 1 ? `<h3>Parts in this model (${parts.length})</h3><div class="pills">${parts.slice(0, 40).map(n => `<button class="pill" data-p="${esc(n)}" style="--pc:${s.color}"><i></i>${esc(cap(n))}</button>`).join('')}${parts.length > 40 ? `<span class="note">+${parts.length - 40} more: tap the model</span>` : ''}</div>` : ''}
+  ${o.other ? '' : `<div class="nav"><button class="btn" id="pv">← ${esc(prev.name)}</button><button class="btn" id="nx">${esc(next.name)} →</button></div>`}`;
+  document.getElementById('bk').onclick = () => { state.sel = null; state.selOrg = null; state.isolate = false; setHighlight(null); closePop(false); refresh(); frameCurrent(); renderPanel(); };
+  document.getElementById('iso').onclick = toggleIsolate; document.getElementById('foc').onclick = () => flyToBox(boxOf([o]), 1.4);
+  const firstPart = () => { const sel = state.sel && state.selOrg === o ? state.sel : null; if (sel) return sel; const m = o.meshes.find(m => sexOk(m.userData.sex)); if (!m) return null; const p = m.userData.parts[0]; p.mesh = m; return p; };
+  document.getElementById('cuo').onclick = () => { const p = firstPart(); if (p) openCloseup(p, o, 'organ'); };
+  document.getElementById('cui').onclick = () => { const p = firstPart(); if (p) openCloseup(p, o, 'organ', true); };
+  if (!o.other) { document.getElementById('pv').onclick = () => selectOrgan(prev); document.getElementById('nx').onclick = () => selectOrgan(next); }
+  content.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const p = o.parts.find(p => p.n === b.dataset.p && sexOk(p.x)); if (!p) return; const m = o.meshes.find(m => m.userData.parts.includes(p)) || o.meshes[0]; p.mesh = m; selectPart(p, o, null, true); });
+}
+
+/* ============ QUIZ ============ */
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pick = a => a[Math.random() * a.length | 0];
+function startQuiz() { state.sel = null; state.selOrg = null; state.isolate = false; setHighlight(null); closePop(false); state.quiz = { scope: state.sys, score: 0, total: 0, streak: 0 }; refresh(); nextQ(); }
+function quizPool(scope) { return Object.values(ORG).filter(o => !o.other && !o.share && o.fn.length && sexOk(o.sex) && (scope === 'all' ? true : o.sys === scope) && (o.proc || o.parts.some(p => sexOk(p.x)))); }
+function nextQ() {
+  const qz = state.quiz; qz.answered = false; qz.choice = null; const pool = quizPool(qz.scope); if (!pool.length) return renderQuiz();
+  const o = pick(pool); const r = Math.random(); let q;
+  const visible = o.meshes.some(m => m.visible && m.userData.pickable);
+  if (r < .35 && visible && !o.inset) q = { type: 'tap', o };
+  else if (r < .5 && qz.scope === 'all') { const others = shuffle(SYSTEMS.filter(s => s.id !== o.sys)).slice(0, 3); q = { type: 'sys', o, text: `Which organ system does the <b>${esc(o.name)}</b> belong to?`, opts: shuffle([SYS[o.sys], ...others]).map(s => ({ id: s.id, label: s.name })), answer: o.sys }; }
+  else { const fn = pick(o.fn); let others = shuffle(pool.filter(x => x !== o && x.name !== o.name)); if (others.length < 3) others = others.concat(shuffle(quizPool('all').filter(x => x !== o && !others.includes(x))));
+    q = { type: 'fn', o, text: `Which structure has this function?<br><span style="font-weight:600;color:#344052">“${esc(fn)}”</span>`, opts: shuffle([o, ...others.slice(0, 3)]).map(x => ({ id: x.id, label: x.name })), answer: o.id }; }
+  qz.q = q; state.sel = null; state.selOrg = null; setHighlight(null); refresh(); renderQuiz();
+}
+function renderQuiz() {
+  const qz = state.quiz; const s = qz.scope === 'all' ? { name: 'All systems', color: '#9b7fd1' } : SYS[qz.scope]; setAccent(s.color); const q = qz.q;
+  let body = '';
+  if (!q) body = '<p class="note">Loading organs…</p>';
+  else if (q.type === 'tap') body = `<div class="qtype">🖐 Find it on the model</div><div class="qtext">Tap the <b>${esc(q.o.name)}</b> on the 3D model.</div>` + (qz.answered ? '' : `<div class="tapcue">👆 Rotate, zoom or use X-ray, then tap the structure. Labels are hidden for this question.</div><div class="btns"><button class="btn" id="skip">Show me</button></div>`);
+  else body = `<div class="qtype">${q.type === 'sys' ? '🧩 Classify' : '⚙️ Function'}</div><div class="qtext">${q.text}</div><div class="opts">${q.opts.map(op => { let c = ''; if (qz.answered) { if (op.id === q.answer) c = ' right'; else if (op.id === qz.choice) c = ' wrong'; } return `<button class="opt${c}" data-id="${op.id}" ${qz.answered ? 'disabled' : ''}>${esc(op.label)}</button>`; }).join('')}</div>`;
+  if (qz.answered) body += `<div class="feedback ${qz.correct ? 'ok' : 'no'}">${qz.correct ? '✅ Correct!' : '❌ Not quite.'} ${esc(qz.explain)}</div><div class="btns"><button class="btn primary" id="nq">Next question →</button><button class="btn" id="learn">Learn about it</button></div>`;
+  content.innerHTML = `<button class="back" id="bk">← Exit quiz</button><div class="eyebrow"><i></i>Quiz · ${esc(s.name)}</div>
+  <div class="score" style="margin-top:10px"><div><b>${qz.score}</b>Correct</div><div><b>${qz.total}</b>Answered</div><div><b>${qz.total ? Math.round(qz.score / qz.total * 100) : 0}%</b>Score</div><div><b>${qz.streak}🔥</b>Streak</div></div>
+  <div class="qbox">${body}</div><p class="note">Tip: choose another system to quiz a different system.</p>`;
+  document.getElementById('bk').onclick = () => { state.quiz = null; state.sel = null; state.selOrg = null; setHighlight(null); refresh(); renderPanel(); };
+  content.querySelectorAll('.opt').forEach(b => b.onclick = () => answerOpt(b.dataset.id));
+  const sk = document.getElementById('skip'); if (sk) sk.onclick = () => answerTap(null);
+  const nq = document.getElementById('nq'); if (nq) nq.onclick = nextQ;
+  const ln = document.getElementById('learn'); if (ln) ln.onclick = () => { const o = q.o; state.quiz = null; selectOrgan(o); };
+}
+function grade(ok, explain) { const qz = state.quiz; qz.answered = true; qz.correct = ok; qz.total++; if (ok) { qz.score++; qz.streak++; } else qz.streak = 0; qz.explain = explain; }
+function showAnswer(o) { const ms = o.meshes.filter(m => sexOk(m.userData.sex)); if (ms.length) { const p = ms[0].userData.parts[0]; p.mesh = ms[0]; state.sel = p; state.selOrg = o; refresh(); flyToBox(boxOf([o]), 1.4); } }
+function answerOpt(id) { const qz = state.quiz, q = qz.q; if (qz.answered) return; qz.choice = id; grade(id === q.answer, q.type === 'sys' ? `The ${q.o.name} belongs to the ${SYS[q.o.sys].name} system.` : `That's the ${q.o.name}. ${q.o.loc}`); showAnswer(q.o); renderQuiz(); }
+function answerTap(o) { const qz = state.quiz, q = qz.q; const ok = o === q.o; grade(ok, ok ? `That's the ${q.o.name}.` : o ? `You tapped the ${o.name}. The ${q.o.name} is now selected.` : 'Here it is.'); showAnswer(q.o); renderQuiz(); }
+
+
+/* ============ REALISTIC CUT SURFACES (stencil caps with tissue textures) ============ */
+const CAP_VS = `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+const CAP_FS = `
+uniform vec3 col; uniform int kind; varying vec3 vW;
+float h3(vec3 p){ p = fract(p * 0.3183099 + .1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float nz(vec3 x){ vec3 i = floor(x), f = fract(x); f = f * f * (3. - 2. * f);
+  return mix(mix(mix(h3(i), h3(i + vec3(1,0,0)), f.x), mix(h3(i + vec3(0,1,0)), h3(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(h3(i + vec3(0,0,1)), h3(i + vec3(1,0,1)), f.x), mix(h3(i + vec3(0,1,1)), h3(i + vec3(1,1,1)), f.x), f.y), f.z); }
+float fbm(vec3 p){ float a = .5, s = 0.; for (int i = 0; i < 4; i++) { s += a * nz(p); p *= 2.03; a *= .5; } return s; }
+vec2 cel(vec3 p){ vec3 i = floor(p), f = fract(p); float d1 = 8., d2 = 8.;
+  for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++) for (int z = -1; z <= 1; z++) {
+    vec3 g = vec3(float(x), float(y), float(z)); vec3 o = vec3(h3(i + g), h3(i + g + 11.3), h3(i + g + 27.1)); vec3 r = g + o - f; float d = dot(r, r);
+    if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d; }
+  return vec2(sqrt(d1), sqrt(d2)); }
+void main(){
+  vec3 p = vW; vec3 c = col; float g = fbm(p * 450.);
+  if (kind == 0) { // spongy bone with marrow
+    float n = fbm(p * 230.); float pore = smoothstep(.55, .68, n);
+    c = mix(col * (.92 + .12 * g), vec3(.62, .25, .2), pore * .85);
+  } else if (kind == 1 || kind == 2) { // skeletal / cardiac muscle: fascicles + fibres
+    if (kind == 2) { c = col * (.88 + .16 * fbm(p * vec3(380., 900., 380.))); }
+    else { vec2 cc = cel(p * 170.); float edge = 1. - smoothstep(.0, .05, cc.y - cc.x); c = col * (.86 + .18 * fbm(p * 420.)); c = mix(c, vec3(.78, .5, .46), edge * .4); }
+  } else if (kind == 3) { c = col * (.9 + .16 * g); // grey matter
+  } else if (kind == 4) { c = col * (.95 + .08 * fbm(p * 500.)); // white matter / nerve
+  } else if (kind == 5) { // liver lobules with central veins
+    vec2 cc = cel(p * 260.); float edge = 1. - smoothstep(.0, .06, cc.y - cc.x);
+    c = col * (.9 + .15 * fbm(p * 300.)); c = mix(c, col * 1.35, edge * .35); c = mix(c, vec3(.3, .07, .06), (1. - smoothstep(.04, .1, cc.x)) * .5);
+  } else if (kind == 6) { // lung: spongy alveoli
+    float n = fbm(p * 650.); float hole = smoothstep(.52, .64, n); c = mix(col * (1.05 + .1 * g), vec3(.42, .13, .14), hole * .75);
+  } else if (kind == 7) { // kidney: granular cortex
+    c = col * (.86 + .2 * fbm(p * 500.));
+  } else if (kind == 8) { c = col * (.9 + .12 * fbm(p * 300.)); // arterial blood
+  } else if (kind == 9) { c = col * (.85 + .15 * fbm(p * 300.)); // venous blood
+  } else if (kind == 10) { // fat lobules
+    vec2 cc = cel(p * 260.); float edge = 1. - smoothstep(.0, .05, cc.y - cc.x); c = mix(col * (.95 + .1 * g), vec3(.95, .9, .8), edge * .6);
+  } else if (kind == 11) { c = col * (.96 + .06 * fbm(p * 700.)); // cartilage
+  } else if (kind == 12) { // glandular lobules
+    vec2 cc = cel(p * 320.); float edge = 1. - smoothstep(.0, .06, cc.y - cc.x); c = col * (.9 + .15 * fbm(p * 400.)); c = mix(c, col * 1.3, edge * .35);
+  } else if (kind == 13) { c = col * (.85 + .25 * fbm(p * 1100.)); // gut wall
+  } else { c = col * (.9 + .15 * g); }
+  gl_FragColor = vec4(c, 1.0);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}`;
+function tissueOf(p, org) {
+  const n = p.n.toLowerCase(), o = org.id, s = org.sys;
+  const T = (kind, col) => ({ kind, col });
+  if (o === 'skin' || (s === 'integumentary' && !org.inset)) return null;
+  if (org.inset) return o === 'hypodermis' ? T(10, '#f0cf6e') : o === 'epidermis' ? T(14, '#e9b998') : o === 'dermis' ? T(13, '#e2948a') : T(14, colorFor(p));
+  if (o === 'teeth') return /gingiva/.test(n) ? T(13, '#d9757a') : T(11, '#f3eddc');
+  if (s === 'skeletal') return /cartilage|disc|meniscus|annulus/.test(n) ? T(11, '#cfdde0') : o === 'ligaments' ? T(4, '#e8e0cc') : T(0, '#efe4c8');
+  if (s === 'muscular') return /tendon|linea alba|retinaculum|raphe|tendinous|aponeurosis/.test(n) ? T(4, '#eae2d0') : T(1, '#9c2a26');
+  if (s === 'cardiovascular') {
+    if (o === 'heart') return /cavity/.test(n) ? T(9, '#4a0a10') : /valve|cusp|leaflet/.test(n) ? T(11, '#eadcc4') : T(2, '#8e2a24');
+    if (/pulmonary (trunk|artery)/.test(n)) return T(9, '#5a1018');
+    if (/pulmonary vein/.test(n)) return T(8, '#b81820');
+    return /vein|venous|sinus/.test(n) ? T(9, '#4c0d14') : T(8, '#b3141c');
+  }
+  if (s === 'nervous') {
+    if (o === 'cerebrum') return /white matter/.test(n) ? T(4, '#eee5d8') : T(3, '#b8948b');
+    if (o === 'cerebellum' || o === 'basal_nuclei' || o === 'thalamus' || o === 'limbic' || o === 'hypothalamus') return T(3, '#bd9a90');
+    if (o === 'ventricles') return T(14, '#a8cfe8');
+    if (o === 'eye') { if (/vitreous|chamber/.test(n)) return T(14, '#d6eaf2'); if (/lens/.test(n)) return T(14, '#ecd486'); if (/rectus|oblique|levator/.test(n)) return T(1, '#9c2a26'); if (/iris|choroid/.test(n)) return T(14, '#4a2a24'); return T(11, '#f2efe8'); }
+    return T(4, '#efe4cc');
+  }
+  if (s === 'respiratory') {
+    if (o === 'lungs') return T(6, '#d98d8b');
+    if (o === 'pharynx' || o === 'diaphragm' || (o === 'larynx' && !/cartilage|epiglottis|ligament|membrane|conus/.test(n))) return T(1, '#9c2a26');
+    if (o === 'nasal' && /concha/.test(n)) return T(0, '#efe4c8');
+    return T(11, '#e8e2d6');
+  }
+  if (s === 'digestive') {
+    if (o === 'liver') return /duct|biliary/.test(n) ? T(14, '#4f7a2e') : T(5, '#6e2219');
+    if (o === 'gallbladder') return T(14, '#3d6a22');
+    if (o === 'pancreas') return T(12, '#e3b884');
+    if (o === 'mouth') return /tongue|glossus/.test(n) ? T(1, '#a8403c') : T(12, '#e2b48e');
+    return T(13, '#d98b7a');
+  }
+  if (s === 'urinary') return o === 'kidneys' ? T(7, '#7d2a1f') : T(13, '#e0a882');
+  if (s === 'endocrine') return T(12, { adrenals: '#d9a441', pituitary: '#c88aa0', pineal: '#b88a9a', thyroid: '#9b3040' }[o] || '#c79a8a');
+  if (s === 'lymphatic') return T(12, { spleen: '#5e1a2c', thymus: '#e6c3a8', tonsils: '#d27f8a', nodes: '#c99a8a' }[o] || '#c99a8a');
+  if (s === 'reproductive') {
+    if (o === 'mammary') return /adipose/.test(n) ? T(10, '#f1cf6a') : /lobe/.test(n) ? T(12, '#e3a0a0') : T(11, '#f3e6d0');
+    if (o === 'uterus' || o === 'vagina') return T(1, '#c46d72');
+    return T(12, colorFor(p));
+  }
+  return T(14, colorFor(p));
+}
+const stBack = new THREE.MeshBasicMaterial({ side: THREE.BackSide, colorWrite: false, depthWrite: false, depthTest: false, stencilWrite: true, stencilFunc: THREE.AlwaysStencilFunc, stencilFail: THREE.IncrementWrapStencilOp, stencilZFail: THREE.IncrementWrapStencilOp, stencilZPass: THREE.IncrementWrapStencilOp });
+const stFront = new THREE.MeshBasicMaterial({ side: THREE.FrontSide, colorWrite: false, depthWrite: false, depthTest: false, stencilWrite: true, stencilFunc: THREE.AlwaysStencilFunc, stencilFail: THREE.DecrementWrapStencilOp, stencilZFail: THREE.DecrementWrapStencilOp, stencilZPass: THREE.DecrementWrapStencilOp });
+const capQuad = new THREE.PlaneGeometry(1, 1);
+const capMats = {};
+function capMat(t) {
+  const k = t.kind + t.col; if (capMats[k]) return capMats[k];
+  return capMats[k] = new THREE.ShaderMaterial({ uniforms: { col: { value: new THREE.Color(t.col) }, kind: { value: t.kind } }, vertexShader: CAP_VS, fragmentShader: CAP_FS, side: THREE.DoubleSide,
+    stencilWrite: true, stencilRef: 0, stencilFunc: THREE.NotEqualStencilFunc, stencilFail: THREE.ReplaceStencilOp, stencilZFail: THREE.ReplaceStencilOp, stencilZPass: THREE.ReplaceStencilOp });
+}
+function partBoxXf(p, xf) {
+  const g = p.mesh.geometry, pos = g.attributes.position, idx = (p.mesh.userData.origIndex || g.index.array), b = new THREE.Box3(), v = new THREE.Vector3();
+  for (let i = p.start; i < p.start + p.count; i++) { v.fromBufferAttribute(pos, idx[i]); b.expandByPoint(v); }
+  xf.updateMatrixWorld(); return b.applyMatrix4(xf.matrixWorld);
+}
+class Capper {
+  constructor(scene, plane) { this.scene = scene; this.plane = plane; this.group = new THREE.Group(); scene.add(this.group); this.items = new Map(); this.boxes = new Map(); }
+  key(p, xf) { return p.n + '|' + p.start + '|' + xf.uuid; }
+  box(p, xf) { const k = this.key(p, xf); let b = this.boxes.get(k); if (!b) { b = partBoxXf(p, xf); this.boxes.set(k, b); } return b; }
+  sync(list) { // list of {p, org, xf}
+    const want = []; const pl = this.plane;
+    for (const it of list) { if (!it.p.mesh || it.p.mesh.isInstancedMesh || hiddenParts.has(it.p)) continue; const t = tissueOf(it.p, it.org); if (!t) continue;
+      const b = this.box(it.p, it.xf); if (!b.intersectsPlane(pl)) continue; want.push({ ...it, t, b }); }
+    want.sort((a, b) => b.b.getSize(new THREE.Vector3()).lengthSq() - a.b.getSize(new THREE.Vector3()).lengthSq());
+    if (want.length > 900) want.length = 900;
+    const keep = new Set();
+    want.forEach((w, i) => {
+      const k = this.key(w.p, w.xf); keep.add(k); let item = this.items.get(k);
+      if (!item) { const g = partGeo(w.p); const bk = new THREE.Mesh(g, stBack), fr = new THREE.Mesh(g, stFront), cap = new THREE.Mesh(capQuad, capMat(w.t));
+        for (const m of [bk, fr]) { m.matrixAutoUpdate = false; m.matrix.copy(w.xf.matrixWorld); }
+        this.group.add(bk, fr, cap); item = { bk, fr, cap, g }; this.items.set(k, item); }
+      item.bk.renderOrder = 2000 + i * 3; item.fr.renderOrder = 2000 + i * 3 + 1; item.cap.renderOrder = 2000 + i * 3 + 2;
+      item.b = w.b; item.bk.visible = item.fr.visible = item.cap.visible = true; this.place(item);
+    });
+    for (const [k, item] of this.items) if (!keep.has(k)) { item.bk.visible = item.fr.visible = item.cap.visible = false; }
+  }
+  place(item) {
+    const n = this.plane.normal, c = item.b.getCenter(new THREE.Vector3()); const d = n.dot(c) + this.plane.constant;
+    item.cap.position.copy(c).addScaledVector(n, -d); item.cap.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
+    const s = item.b.getSize(new THREE.Vector3()).length() * 1.1; item.cap.scale.set(s, s, 1);
+  }
+  clear() { for (const item of this.items.values()) { this.group.remove(item.bk, item.fr, item.cap); item.g.dispose(); } this.items.clear(); this.boxes.clear(); }
+  reset() { this.clear(); }
+}
+
+/* ============ SLICE (main view) ============ */
+const clipPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0);
+const mainCaps = new Capper(scene, clipPlane);
+function mainCapList() { const out = []; for (const org of Object.values(ORG)) for (const m of org.meshes) { if (!m.visible || !m.userData.pickable || m.isInstancedMesh || m.material.opacity < .5) continue; for (const p of m.userData.parts) out.push({ p, org, xf: m }); } return out; }
+function syncMainCaps() { if (state.slice && state.slice.box && !state.slice.box.isEmpty()) mainCaps.sync(mainCapList()); else mainCaps.clear(); }
+function setSides(d) { for (const m of ALLMATS) { const sd = d || m.userData.double ? THREE.DoubleSide : THREE.FrontSide; if (m.side !== sd) { m.side = sd; m.needsUpdate = true; } } }
+function sliceTargetBox() { if (state.selOrg) return boxOf([state.selOrg]); return boxOf(Object.values(ORG).filter(o => inFocus(o) && o.meshes.length && !(o.id === 'skin' && state.sys !== 'integumentary'))); }
+function planeFor(plane, box, sl) {
+  const a = { x: 0, y: 1, z: 2 }[sl.axis]; const mn = box.min.getComponent(a), mx = box.max.getComponent(a); const v = mn + (mx - mn) * sl.t;
+  plane.normal.set(0, 0, 0).setComponent(a, sl.flip ? 1 : -1); plane.constant = sl.flip ? -v : v;
+}
+function applySlice(recalc) {
+  const sl = state.slice; const bar = document.getElementById('slicebar');
+  document.getElementById('tSlice').classList.toggle('on', !!sl); bar.classList.toggle('on', !!sl);
+  document.querySelector('#stage .hint').style.display = sl ? 'none' : '';
+  if (!sl) { renderer.clippingPlanes = []; setSides(false); mainCaps.clear(); return; }
+  if (recalc || !sl.box || sl.box.isEmpty()) sl.box = sliceTargetBox();
+  if (sl.box.isEmpty()) return;
+  planeFor(clipPlane, sl.box, sl); renderer.clippingPlanes = [clipPlane]; setSides(true); syncMainCaps();
+  document.querySelectorAll('#sliceAx button').forEach(b => b.classList.toggle('on', b.dataset.ax === sl.axis));
+  document.getElementById('sliceR').value = sl.t;
+}
+function toggleSlice(on = !state.slice) { state.slice = on ? { axis: 'z', t: .5, flip: false } : null; applySlice(true); }
+document.getElementById('sliceR').oninput = e => { if (state.slice) { state.slice.t = +e.target.value; applySlice(); } };
+document.querySelectorAll('#sliceAx button').forEach(b => b.onclick = () => { state.slice.axis = b.dataset.ax; state.slice.t = .5; applySlice(); });
+document.getElementById('sliceFlip').onclick = () => { state.slice.flip = !state.slice.flip; applySlice(); };
+document.getElementById('sliceX').onclick = () => toggleSlice(false);
+
+/* ============ CLOSE-UP VIEWER ============ */
+const CU = { open: false, slice: { on: false, axis: 'z', t: .5, flip: false } };
+function initCU() {
+  if (CU.r) return; const view = document.getElementById('cuView');
+  CU.r = new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true }); CU.r.setPixelRatio(Math.min(devicePixelRatio, 2));
+  CU.r.toneMapping = THREE.ACESFilmicToneMapping; CU.r.toneMappingExposure = 1.08; view.prepend(CU.r.domElement);
+  CU.scene = new THREE.Scene(); const pm = new THREE.PMREMGenerator(CU.r); CU.scene.environment = pm.fromScene(new RoomEnvironment(), .04).texture;
+  const k = new THREE.DirectionalLight(0xffffff, 1.5); k.position.set(2, 3, 4); CU.scene.add(k); const r2 = new THREE.DirectionalLight(0xa8c0ff, .6); r2.position.set(-3, 1, -3); CU.scene.add(r2);
+  CU.cam = new THREE.PerspectiveCamera(35, 1, .0005, 10); CU.ctl = new OrbitControls(CU.cam, CU.r.domElement); CU.ctl.enableDamping = true; CU.ctl.dampingFactor = .08; CU.ctl.autoRotateSpeed = 2;
+  CU.root = new THREE.Group(); CU.inner = new THREE.Group(); CU.root.add(CU.inner); CU.scene.add(CU.root);
+  CU.plane = new THREE.Plane(); CU.hl = null; CU.caps = new Capper(CU.scene, CU.plane);
+  new ResizeObserver(() => { const w = view.clientWidth, h = view.clientHeight; if (!w) return; CU.r.setSize(w, h, false); CU.cam.aspect = w / h; CU.cam.updateProjectionMatrix(); }).observe(view);
+  let d = null; const cv = CU.r.domElement; const rc = new THREE.Raycaster();
+  cv.addEventListener('pointerdown', e => { d = { x: e.clientX, y: e.clientY }; });
+  cv.addEventListener('pointerup', e => {
+    if (!d) return; const mv = Math.hypot(e.clientX - d.x, e.clientY - d.y); d = null; if (mv > 7) return;
+    const r = cv.getBoundingClientRect(); rc.setFromCamera(new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), CU.cam);
+    const hits = rc.intersectObjects(CU.inner.children, false);
+    for (const h of hits) {
+      if (CU.slice.on && CU.plane.distanceToPoint(h.point) < 0) continue; if (h.object.userData.hl) continue;
+      const src = h.object.userData; let p = src.single || null;
+      if (!p && src.parts) { p = partAt({ userData: { parts: src.parts, org: src.org } }, h.faceIndex); if (p) p.mesh = src.srcMesh; }
+      if (p) { CU.p = p; if (src.org) CU.org = src.org; cuHighlight(); renderCUInfo(); document.getElementById('cuWinTitle').textContent = cap(p.n); } break;
+    }
+  });
+  document.querySelectorAll('#cuMode button').forEach(b => b.onclick = () => { CU.mode = b.dataset.m; buildCU(); });
+  document.getElementById('cuSliceBtn').onclick = () => { CU.slice.on = !CU.slice.on; CU.slice.t = .5; cuApplySlice(); if (CU.slice.on) cuFaceCut(); };
+  document.getElementById('cuRot').onclick = () => { CU.ctl.autoRotate = !CU.ctl.autoRotate; document.getElementById('cuRot').classList.toggle('on', CU.ctl.autoRotate); };
+  document.getElementById('cuReset').onclick = () => cuFrame();
+  document.getElementById('cuR').oninput = e => { CU.slice.t = +e.target.value; cuApplySlice(); };
+  document.querySelectorAll('#cuAx button').forEach(b => b.onclick = () => { CU.slice.axis = b.dataset.ax; CU.slice.t = .5; cuApplySlice(); cuFaceCut(); });
+  document.getElementById('cuFlip').onclick = () => { CU.slice.flip = !CU.slice.flip; cuApplySlice(); cuFaceCut(); };
+  document.getElementById('cu').addEventListener('pointerdown', e => { if (e.target.id === 'cu') closeCloseup(); });
+  addEventListener('keydown', e => { if (e.key === 'Escape' && CU.open) closeCloseup(); });
+}
+function cuMat(sys) { const m = makeMat(sys, { cu: true }); m.side = CU.slice.on ? THREE.DoubleSide : THREE.FrontSide; return m; }
+function buildCU() {
+  for (const c of [...CU.inner.children]) { CU.inner.remove(c); if (c.userData.own) c.geometry.dispose(); }
+  CU.hl = null; CU.caps.clear(); const org = CU.org, p = CU.p;
+  if (CU.mode === 'part' && p.mesh) {
+    const g = partGeo(p, true); let m;
+    if (p.mesh.isInstancedMesh) { m = new THREE.Mesh(g, cuMat(org.sys)); }
+    else { m = new THREE.Mesh(g, cuMat(org.sys)); m.position.copy(p.mesh.position); m.rotation.copy(p.mesh.rotation); m.scale.copy(p.mesh.scale); }
+    m.userData = { own: true, single: p, org }; CU.inner.add(m);
+  } else {
+    const BRAIN = ['cerebrum', 'corpus_callosum', 'limbic', 'basal_nuclei', 'thalamus', 'hypothalamus', 'ventricles', 'cerebellum', 'brainstem'];
+    const group = BRAIN.includes(org.id) ? BRAIN.map(id => ORG[id]).filter(Boolean) : [org];
+    for (const sm of group.flatMap(g => g.meshes)) {
+      if (!sexOk(sm.userData.sex)) continue; let m;
+      if (sm.isInstancedMesh) { m = new THREE.InstancedMesh(sm.geometry, cuMat(org.sys), sm.count); for (let i = 0; i < sm.count; i++) { const m4 = new THREE.Matrix4(); sm.getMatrixAt(i, m4); m.setMatrixAt(i, m4); } }
+      else { m = new THREE.Mesh(sm.geometry, cuMat(org.sys)); m.position.copy(sm.position); m.rotation.copy(sm.rotation); m.scale.copy(sm.scale); }
+      if (sm.userData.layer === 'shell') { m.material.transparent = true; m.material.opacity = .45; m.material.depthWrite = false; }
+      m.userData = { parts: sm.userData.parts, org: sm.userData.org, srcMesh: sm }; CU.inner.add(m);
+    }
+  }
+  document.querySelectorAll('#cuMode button').forEach(b => { b.classList.toggle('on', b.dataset.m === CU.mode); if (b.dataset.m === 'organ') b.textContent = ['cerebrum', 'corpus_callosum', 'limbic', 'basal_nuclei', 'thalamus', 'hypothalamus', 'ventricles', 'cerebellum', 'brainstem'].includes(org.id) ? 'Whole brain' : 'Whole organ'; });
+  document.getElementById('cuMode').style.display = (org.parts.length > 1 || org.meshes.length > 1) ? '' : 'none';
+  CU.inner.position.set(0, 0, 0); CU.inner.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  CU.inner.children.forEach(c => { if (c.isInstancedMesh) { c.computeBoundingBox(); box.union(c.boundingBox); } else box.expandByObject(c); });
+  const ctr = box.getCenter(new THREE.Vector3()); CU.inner.position.copy(ctr).negate(); CU.inner.updateMatrixWorld(true); CU.box = box.translate(ctr.clone().negate());
+  cuFrame(); cuHighlight(); cuApplySlice(); renderCUInfo();
+}
+function cuFrame() {
+  const r = CU.box.getBoundingSphere(new THREE.Sphere()).radius || .05; const fov = THREE.MathUtils.degToRad(CU.cam.fov);
+  const half = Math.atan(Math.tan(fov / 2) * Math.min(1, CU.cam.aspect || 1)); const dist = r / Math.sin(half) * 1.15;
+  CU.ctl.target.set(0, 0, 0); CU.cam.position.set(.35, .2, 1).normalize().multiplyScalar(dist); CU.cam.near = dist / 200; CU.cam.far = dist * 20; CU.cam.updateProjectionMatrix();
+  CU.ctl.minDistance = r * .15; CU.ctl.maxDistance = r * 8;
+}
+function cuFaceCut() {
+  const d = CU.cam.position.length(); const a = CU.slice.axis, f = CU.slice.flip ? -1 : 1;
+  const dir = a === 'z' ? new THREE.Vector3(.22, .12, f) : a === 'x' ? new THREE.Vector3(f, .15, .22) : new THREE.Vector3(.12, f, .35 * f);
+  CU.cam.position.copy(dir.normalize().multiplyScalar(d)); CU.ctl.target.set(0, 0, 0); CU.ctl.update();
+}
+function cuHighlight() {
+  if (CU.hl) { CU.inner.remove(CU.hl); CU.hl = null; }
+  if (CU.mode !== 'organ' || !CU.p || !CU.p.mesh) return;
+  const g = partGeo(CU.p); const inst = CU.p.mesh.isInstancedMesh;
+  const m = inst ? new THREE.InstancedMesh(g, hlMat, CU.p.mesh.count) : new THREE.Mesh(g, hlMat);
+  if (inst) for (let i = 0; i < CU.p.mesh.count; i++) { const m4 = new THREE.Matrix4(); CU.p.mesh.getMatrixAt(i, m4); m.setMatrixAt(i, m4); }
+  else { m.position.copy(CU.p.mesh.position); m.rotation.copy(CU.p.mesh.rotation); m.scale.copy(CU.p.mesh.scale); }
+  m.userData = { own: true, hl: true }; m.renderOrder = 5; CU.inner.add(m); CU.hl = m;
+}
+function cuApplySlice() {
+  const sl = CU.slice; document.getElementById('cuSlice').classList.toggle('on', sl.on); document.getElementById('cuSliceBtn').classList.toggle('on', sl.on);
+  for (const c of CU.inner.children) if (!c.userData.hl) { const sd = sl.on ? THREE.DoubleSide : THREE.FrontSide; if (c.material.side !== sd) { c.material.side = sd; c.material.needsUpdate = true; } }
+  if (!sl.on || !CU.box) { CU.r.clippingPlanes = []; CU.caps.clear(); return; }
+  planeFor(CU.plane, CU.box, sl); CU.r.clippingPlanes = [CU.plane];
+  const list = []; for (const c of CU.inner.children) { if (c.userData.hl) continue; if (c.userData.single) list.push({ p: c.userData.single, org: c.userData.org || CU.org, xf: c }); else if (c.userData.parts) for (const p of c.userData.parts) list.push({ p, org: c.userData.org || CU.org, xf: c }); }
+  CU.caps.sync(list);
+  document.getElementById('cuR').value = sl.t; document.querySelectorAll('#cuAx button').forEach(b => b.classList.toggle('on', b.dataset.ax === sl.axis));
+}
+function renderCUInfo() {
+  const p = CU.p, org = CU.org, sys = SYS[org.sys]; const el = document.getElementById('cuInfo'); el.style.setProperty('--c', sys.color);
+  const fns = partFunction(p, org); const dec = org.sys === 'muscular' ? decodeMuscle(p.n) : '';
+  el.innerHTML = `<button class="x" id="cuX">✕</button><div class="eyebrow"><span class="dot img" style="width:22px;height:22px;border-radius:6px;display:inline-block">${ico(sys.id)}</span>${esc(sys.name)} system</div>
+   <h2>${esc(cap(p.n))}</h2>${org.other ? '' : `<div class="where">📍 <span>Part of the <b>${esc(org.name)}</b>${org.loc ? ' · ' + esc(org.loc) : ''}</span></div>`}
+   <h3>Function</h3><ul class="list">${fns.map(f => `<li${f.key ? ' style="font-weight:700"' : ''}>${esc(f.t)}</li>`).join('')}</ul>${dec ? `<div class="fact" style="margin-top:12px"><b>Name clues</b>${dec.replace('Name clues: ', '')}</div>` : ''}
+   ${org.facts && org.facts.length ? `<h3>Key facts</h3><ul class="list">${org.facts.map(f => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
+   <div class="fact"><b>Explore</b>Switch between “This part” and “Whole organ”. Tap ✂ Cut open, then drag the slider to look inside. In Whole organ view, tap any part to identify it.</div>`;
+  document.getElementById('cuX').onclick = closeCloseup;
+}
+function openCloseup(p, org, mode = 'part', slice = false) {
+  if (!p.mesh) { const m = org.meshes.find(m => m.userData.parts.includes(p)); if (!m) return; p.mesh = m; }
+  const cuEl = document.getElementById('cu'); cuEl.classList.add('on'); clearTimeout(CU.closeT);
+  const bx = document.getElementById('cuBox').getBoundingClientRect(); document.getElementById('cuBox').style.transformOrigin = `${lastPtr.x - bx.left}px ${lastPtr.y - bx.top}px`;
+  requestAnimationFrame(() => cuEl.classList.add('show'));
+  document.getElementById('cuWinTitle').textContent = cap(p.n);
+  initCU(); CU.open = true; CU.p = p; CU.org = org; CU.mode = mode;
+  CU.slice = { on: slice, axis: 'z', t: .5, flip: false }; CU.ctl.autoRotate = false; document.getElementById('cuRot').classList.remove('on');
+  const view = document.getElementById('cuView'); CU.r.setSize(view.clientWidth, view.clientHeight, false); CU.cam.aspect = view.clientWidth / view.clientHeight; CU.cam.updateProjectionMatrix();
+  buildCU();
+}
+function closeCloseup() { const cuEl = document.getElementById('cu'); cuEl.classList.remove('show'); CU.closeT = setTimeout(() => { cuEl.classList.remove('on'); CU.open = false; }, 420); }
+let lastPtr = { x: innerWidth / 2, y: innerHeight / 2 };
+addEventListener('pointerdown', e => { lastPtr = { x: e.clientX, y: e.clientY }; }, true);
+document.getElementById('cuClose').onclick = () => closeCloseup(); document.getElementById('cuMin').onclick = () => closeCloseup();
+document.getElementById('cuMax').onclick = () => { const b = document.getElementById('cuBox'); const on = b.style.width === '100%'; b.style.width = on ? '' : '100%'; b.style.height = on ? '' : '100%'; };
+
+/* ============ TOOLS ============ */
+const tb = (id, fn) => document.getElementById(id).onclick = fn;
+tb('tReset', resetView);
+tb('tRotate', () => { state.rotate = !state.rotate; controls.autoRotate = state.rotate; document.getElementById('tRotate').classList.toggle('on', state.rotate); });
+tb('tXray', () => { state.xray = !state.xray; document.getElementById('tXray').classList.toggle('on', state.xray); refresh(); });
+tb('tLabels', () => { state.labels = !state.labels; document.getElementById('tLabels').classList.toggle('on', state.labels); });
+tb('tSkin', () => { state.skin = !state.skin; document.getElementById('tSkin').classList.toggle('on', state.skin); if (state.skin) ensureSys('integumentary'); refresh(); });
+tb('tGhost', async () => { state.ghost = !state.ghost; document.getElementById('tGhost').classList.toggle('on', state.ghost); refresh(); if (state.ghost) await ensureSys('all'); });
+tb('tIsolate', toggleIsolate); tb('tSlice', () => toggleSlice()); tb('tUnhide', unhideAll);
+document.querySelectorAll('#sexSeg button').forEach(b => b.onclick = () => {
+  state.sex = b.dataset.sex; document.querySelectorAll('#sexSeg button').forEach(x => x.classList.toggle('on', x === b));
+  if (state.sel && !sexOk(state.sel.x)) { state.sel = null; state.selOrg = null; state.isolate = false; setHighlight(null); closePop(false); }
+  if (state.selOrg && !sexOk(state.selOrg.sex)) { state.selOrg = null; }
+  refresh(); if (state.quiz) nextQ(); else renderPanel(); if (state.sys === 'reproductive') frameCurrent();
+});
+
+/* ============ WINDOW CHROME ============ */
+const win = document.getElementById('win');
+document.getElementById('wClose').onclick = () => { closePop(false); if (state.quiz) state.quiz = null; selectSystem('all'); };
+document.getElementById('wMin').onclick = () => win.classList.toggle('noinsp');
+document.getElementById('wMax').onclick = () => { win.classList.toggle('full'); try { if (win.classList.contains('full') && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); else if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (e) {} };
+function placeThumb() { const seg = document.getElementById('sexSeg'), on = seg.querySelector('button.on'), th = seg.querySelector('.thumb'); if (!on) return; th.style.left = on.offsetLeft + 'px'; th.style.width = on.offsetWidth + 'px'; }
+document.querySelectorAll('#sexSeg button').forEach(b => b.addEventListener('click', () => requestAnimationFrame(placeThumb)));
+addEventListener('load', placeThumb); setTimeout(placeThumb, 300); placeThumb();
+renderer.domElement.addEventListener('pointerdown', () => { document.getElementById('hint').style.opacity = 0; }, { once: true });
+
+/* ============ LOOP ============ */
+function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(stage); resize();
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+let lastT = performance.now();
+function loop(now) {
+  requestAnimationFrame(loop);
+  if (tween) { const t = Math.min(1, (now - tween.t0) / tween.dur), k = ease(t); camera.position.lerpVectors(tween.fromP, tween.toP, k); controls.target.lerpVectors(tween.fromT, tween.toT, k); if (t >= 1) { tween = null; if (pop.classList.contains('show')) placePop(false); } }
+  const dt = Math.min(.05, (now - lastT) / 1000); lastT = now; stepFades(dt);
+  const pulse = .5 + .5 * Math.sin(now / 200); hlMat.emissiveIntensity = .5 + .7 * pulse; hlMat.opacity = .45 + .3 * pulse; olMat.opacity = .7 + .3 * pulse;
+  if (CU.open) { CU.ctl.update(); CU.r.render(CU.scene, CU.cam); return; }
+  controls.update(); renderer.render(scene, camera); updateLabels(); updateLeader(now);
+}
+requestAnimationFrame(loop);
+window.__A = { ORG, ensureSys, scene, camera, controls, renderer, boxOf, flyToBox, refresh, state };
+
+/* ============ BOOT ============ */
+(async () => {
+  showLoad('Loading anatomy data…');
+  MAN = await (await fetch('data/manifest.json')).json();
+  for (const e of MAN.parts) { const org = e.o || e.s + '_other'; const p = { ...e, org }; PARTS.push(p); const o = getOrg(org, e.s); o.parts.push(p); if (p.x) o.sexes.add(p.x); }
+  for (const id of Object.keys(ORGANS)) { const o = getOrg(id, ORGANS[id].sys); if (o.share) o.parts = ORG[o.share] ? ORG[o.share].parts : []; }
+  renderNav(); renderPanel();
+  await ensureSys('integumentary'); await ensureSys('skeletal'); frameCurrent();
+  ensureSys('all').then(() => { renderPanel(); });
+})().catch(err => { loadTxt.textContent = 'Could not load the 3D data: ' + err.message; loaderEl.style.display = 'block'; console.error(err); });
+</script>
+</body>
+</html>
