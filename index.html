@@ -1595,7 +1595,7 @@ function liftPose() {
 }
 function liftTick(now, dt) {
   if (!LIFT.mesh) return; liftPose();
-  const t = Math.min(1, (now - LIFT.t0) / 750), k = easeIO(LIFT.dir > 0 ? t : 1 - t);
+  const t = Math.min(1, (now - LIFT.t0) / 750), k = easeIO(LIFT.dir > 0 ? t : 1 - t); LIFT.k = k;
   const m = LIFT.mesh; m.position.lerpVectors(LIFT.from, LIFT.target, k);
   m.position.addScaledVector(camera.up, Math.sin(Math.PI * k) * LIFT.r0 * LIFT.scale * .25);
   const s = 1 + (LIFT.scale - 1) * k; m.scale.setScalar(s);
@@ -1605,6 +1605,45 @@ function liftTick(now, dt) {
   if (LIFT.dir < 0 && t >= 1) liftRemove();
 }
 
+
+
+/* ============ BACKGROUND BLUR (while a part is lifted) ============ */
+const BLUR = (() => {
+  const opt = { type: THREE.HalfFloatType, depthBuffer: true, stencilBuffer: true };
+  const main = new THREE.WebGLRenderTarget(4, 4, { ...opt, samples: 4 });
+  const a = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: false }), b = a.clone();
+  const quadV = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+  const blurM = new THREE.ShaderMaterial({ uniforms: { tex: { value: null }, dir: { value: new THREE.Vector2() } }, vertexShader: quadV, depthTest: false, depthWrite: false, toneMapped: false,
+    fragmentShader: `uniform sampler2D tex; uniform vec2 dir; varying vec2 vUv;
+      void main(){ vec4 c = texture2D(tex, vUv) * .2270270270;
+        c += (texture2D(tex, vUv + dir * 1.3846153846) + texture2D(tex, vUv - dir * 1.3846153846)) * .3162162162;
+        c += (texture2D(tex, vUv + dir * 3.2307692308) + texture2D(tex, vUv - dir * 3.2307692308)) * .0702702703; gl_FragColor = c; }` });
+  const compM = new THREE.ShaderMaterial({ uniforms: { sharp: { value: null }, soft: { value: null }, k: { value: 0 } }, vertexShader: quadV, depthTest: false, depthWrite: false, blending: THREE.NoBlending, toneMapped: true,
+    fragmentShader: `uniform sampler2D sharp, soft; uniform float k; varying vec2 vUv;
+      void main(){ vec4 c = mix(texture2D(sharp, vUv), texture2D(soft, vUv), smoothstep(0.0, .6, k));
+        c.rgb *= 1.0 - .32 * k; gl_FragColor = c;
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }` });
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blurM); quad.frustumCulled = false;
+  const qs = new THREE.Scene(); qs.add(quad); const qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const sz = new THREE.Vector2();
+  function pass(mat, target) { quad.material = mat; renderer.setRenderTarget(target); renderer.render(qs, qc); }
+  return function render(k) {
+    renderer.getDrawingBufferSize(sz);
+    if (main.width !== sz.x || main.height !== sz.y) { main.setSize(sz.x, sz.y); const w = Math.max(2, sz.x >> 2), h = Math.max(2, sz.y >> 2); a.setSize(w, h); b.setSize(w, h); }
+    renderer.setRenderTarget(main); renderer.clear(); renderer.render(scene, camera);
+    const cp = renderer.clippingPlanes; renderer.clippingPlanes = [];
+    let src = main; const r = 1.15 * k;
+    for (let i = 0; i < 2; i++) {
+      blurM.uniforms.tex.value = src.texture; blurM.uniforms.dir.value.set(r / a.width, 0); pass(blurM, a);
+      blurM.uniforms.tex.value = a.texture; blurM.uniforms.dir.value.set(0, r / a.height); pass(blurM, b); src = b;
+    }
+    compM.uniforms.sharp.value = main.texture; compM.uniforms.soft.value = b.texture; compM.uniforms.k.value = k;
+    renderer.setRenderTarget(null); renderer.clear(); pass(compM, null);
+    renderer.clippingPlanes = cp;
+  };
+})();
 
 /* ============ OFFLINE (service worker) ============ */
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
@@ -1660,7 +1699,7 @@ function loop(now) {
   const dt = Math.min(.05, (now - lastT) / 1000); lastT = now; stepFades(dt);
   const pulse = .5 + .5 * Math.sin(now / 200); hlU.uA.value = (LIFT.mesh ? .45 : .75) + .45 * pulse;
   if (CU.open) { CU.ctl.update(); CU.r.render(CU.scene, CU.cam); return; }
-  luTick(now); liftTick(now, dt); luHover(); controls.update(); renderer.render(scene, camera); if (LIFT.mesh) { const cp = renderer.clippingPlanes; renderer.clippingPlanes = []; renderer.autoClear = false; renderer.clearDepth(); renderer.render(liftScene, camera); renderer.autoClear = true; renderer.clippingPlanes = cp; } updateLabels(); luLabels(); updateLeader(now);
+  luTick(now); liftTick(now, dt); luHover(); controls.update(); const bk = LIFT.mesh ? LIFT.k || 0 : 0; if (bk > .01) BLUR(bk); else renderer.render(scene, camera); if (LIFT.mesh) { const cp = renderer.clippingPlanes; renderer.clippingPlanes = []; renderer.autoClear = false; renderer.clearDepth(); renderer.render(liftScene, camera); renderer.autoClear = true; renderer.clippingPlanes = cp; } updateLabels(); luLabels(); updateLeader(now);
 }
 requestAnimationFrame(loop);
 window.__A = { ORG, ensureSys, scene, camera, controls, renderer, boxOf, flyToBox, refresh, state };
