@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Corpara · 3D Human Anatomy</title>
 <link rel="icon" href="icons/logo.png">
+<link rel="manifest" href="corpara.webmanifest">
+<link rel="apple-touch-icon" href="icons/app-192.png">
+<meta name="theme-color" content="#101628">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -1598,6 +1603,16 @@ function liftTick(now, dt) {
   LIFT.center.copy(m.position);
   LIFT.glow.position.copy(m.position).addScaledVector(camera.getWorldDirection(tmpV), LIFT.r0 * s * .6); LIFT.glow.scale.setScalar(LIFT.r0 * s * 3.6); LIFT.glow.material.opacity = k * .9;
   if (LIFT.dir < 0 && t >= 1) liftRemove();
+}
+
+
+/* ============ OFFLINE (service worker) ============ */
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  const hadSW = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('message', ev => {
+    if (ev.data && ev.data.type === 'offline-ready') toast(hadSW ? 'Corpara was updated — refresh to see the newest version.' : '✓ Ready for offline use. Corpara now works even without internet.');
+  });
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 
 /* ============ MOVE PAD + KEYS ============ */
