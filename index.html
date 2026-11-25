@@ -1571,7 +1571,15 @@ const liftScene = new THREE.Scene(); liftScene.environment = scene.environment;
 liftScene.add(key.clone(), rim.clone(), new THREE.HemisphereLight(0xffffff, 0x223355, 0.35));
 const LIFT = { mesh: null, glow: null, p: null, org: null, t0: 0, dir: 1, from: new THREE.Vector3(), fromS: 1, center: new THREE.Vector3(), box: new THREE.Box3(), r0: 1, spin: 0 };
 const glowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(120,180,255,.55)'); gr.addColorStop(.45, 'rgba(70,120,230,.22)'); gr.addColorStop(1, 'rgba(40,70,160,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
-function liftRemove() { if (LIFT.mesh) { liftScene.remove(LIFT.mesh, LIFT.glow); if (LIFT.own) LIFT.mesh.geometry.dispose(); } LIFT.mesh = null; LIFT.glow = null; LIFT.p = null; }
+
+const liftOlMat = new THREE.ShaderMaterial({
+  uniforms: { uW: { value: 3.2 }, uRes: { value: new THREE.Vector2(1, 1) }, uC: { value: new THREE.Color(0x4fb8ff) }, uA: { value: 1 } },
+  side: THREE.BackSide, transparent: true, depthWrite: false,
+  vertexShader: `uniform float uW; uniform vec2 uRes; void main(){ vec4 c = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec4 n = projectionMatrix * vec4(normalMatrix * normal, 0.0); vec2 d = n.xy; float l = length(d); if (l > 1e-5) d /= l;
+    c.xy += d * uW * c.w * 2.0 / uRes; gl_Position = c; }`,
+  fragmentShader: `uniform vec3 uC; uniform float uA; void main(){ gl_FragColor = vec4(uC, uA); }` });
+function liftRemove() { if (LIFT.mesh) { liftScene.remove(LIFT.mesh, LIFT.glow, LIFT.ol); if (LIFT.own) LIFT.mesh.geometry.dispose(); } LIFT.mesh = null; LIFT.glow = null; LIFT.p = null; }
 function liftStart(p, org, src) {
   liftRemove(); if (state.slice || !src) return false;
   let geo, from, own = false;
@@ -1580,8 +1588,9 @@ function liftStart(p, org, src) {
   if (!geo.boundingSphere) geo.computeBoundingSphere();
   const mat = makeMat(org.sys, { org: (src.userData.org || org).id }); const m = new THREE.Mesh(geo, mat); m.renderOrder = 9; m.position.copy(from); m.userData.lift = true;
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, depthTest: false, opacity: 0 })); glow.renderOrder = 8;
-  liftScene.add(glow, m);
-  Object.assign(LIFT, { mesh: m, glow, p, org, own, t0: performance.now(), dir: 1, from, r0: Math.max(geo.boundingSphere.radius, 1e-4), spin: 0 });
+  const ol = new THREE.Mesh(geo, liftOlMat); ol.renderOrder = 8.5; ol.frustumCulled = false;
+  liftScene.add(glow, ol, m);
+  Object.assign(LIFT, { mesh: m, glow, ol, p, org, own, t0: performance.now(), dir: 1, from, r0: Math.max(geo.boundingSphere.radius, 1e-4), spin: 0 });
   liftPose(); state.anchorW = LIFT.center; state.selBox = LIFT.box; return true;
 }
 function liftEnd() { if (!LIFT.mesh || LIFT.dir < 0) return; LIFT.dir = -1; LIFT.t0 = performance.now(); }
@@ -1600,50 +1609,13 @@ function liftTick(now, dt) {
   m.position.addScaledVector(camera.up, Math.sin(Math.PI * k) * LIFT.r0 * LIFT.scale * .25);
   const s = 1 + (LIFT.scale - 1) * k; m.scale.setScalar(s);
   LIFT.spin += dt * .45 * k; m.rotation.set(0, LIFT.spin, 0);
-  LIFT.center.copy(m.position);
+  LIFT.center.copy(m.position); LIFT.ol.position.copy(m.position); LIFT.ol.quaternion.copy(m.quaternion); LIFT.ol.scale.copy(m.scale);
+  renderer.getDrawingBufferSize(liftOlMat.uniforms.uRes.value); liftOlMat.uniforms.uW.value = 3.2 * renderer.getPixelRatio(); liftOlMat.uniforms.uA.value = k * (.75 + .25 * Math.sin(now / 260));
   LIFT.glow.position.copy(m.position).addScaledVector(camera.getWorldDirection(tmpV), LIFT.r0 * s * .6); LIFT.glow.scale.setScalar(LIFT.r0 * s * 3.6); LIFT.glow.material.opacity = k * .9;
   if (LIFT.dir < 0 && t >= 1) liftRemove();
 }
 
 
-
-/* ============ BACKGROUND BLUR (while a part is lifted) ============ */
-const BLUR = (() => {
-  const opt = { type: THREE.HalfFloatType, depthBuffer: true, stencilBuffer: true };
-  const main = new THREE.WebGLRenderTarget(4, 4, { ...opt, samples: 4 });
-  const a = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: false }), b = a.clone();
-  const quadV = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
-  const blurM = new THREE.ShaderMaterial({ uniforms: { tex: { value: null }, dir: { value: new THREE.Vector2() } }, vertexShader: quadV, depthTest: false, depthWrite: false, toneMapped: false,
-    fragmentShader: `uniform sampler2D tex; uniform vec2 dir; varying vec2 vUv;
-      void main(){ vec4 c = texture2D(tex, vUv) * .2270270270;
-        c += (texture2D(tex, vUv + dir * 1.3846153846) + texture2D(tex, vUv - dir * 1.3846153846)) * .3162162162;
-        c += (texture2D(tex, vUv + dir * 3.2307692308) + texture2D(tex, vUv - dir * 3.2307692308)) * .0702702703; gl_FragColor = c; }` });
-  const compM = new THREE.ShaderMaterial({ uniforms: { sharp: { value: null }, soft: { value: null }, k: { value: 0 } }, vertexShader: quadV, depthTest: false, depthWrite: false, blending: THREE.NoBlending, toneMapped: true,
-    fragmentShader: `uniform sampler2D sharp, soft; uniform float k; varying vec2 vUv;
-      void main(){ vec4 c = mix(texture2D(sharp, vUv), texture2D(soft, vUv), smoothstep(0.0, .6, k));
-        c.rgb *= 1.0 - .32 * k; gl_FragColor = c;
-        #include <tonemapping_fragment>
-        #include <colorspace_fragment>
-      }` });
-  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blurM); quad.frustumCulled = false;
-  const qs = new THREE.Scene(); qs.add(quad); const qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  const sz = new THREE.Vector2();
-  function pass(mat, target) { quad.material = mat; renderer.setRenderTarget(target); renderer.render(qs, qc); }
-  return function render(k) {
-    renderer.getDrawingBufferSize(sz);
-    if (main.width !== sz.x || main.height !== sz.y) { main.setSize(sz.x, sz.y); const w = Math.max(2, sz.x >> 2), h = Math.max(2, sz.y >> 2); a.setSize(w, h); b.setSize(w, h); }
-    renderer.setRenderTarget(main); renderer.clear(); renderer.render(scene, camera);
-    const cp = renderer.clippingPlanes; renderer.clippingPlanes = [];
-    let src = main; const r = 1.15 * k;
-    for (let i = 0; i < 2; i++) {
-      blurM.uniforms.tex.value = src.texture; blurM.uniforms.dir.value.set(r / a.width, 0); pass(blurM, a);
-      blurM.uniforms.tex.value = a.texture; blurM.uniforms.dir.value.set(0, r / a.height); pass(blurM, b); src = b;
-    }
-    compM.uniforms.sharp.value = main.texture; compM.uniforms.soft.value = b.texture; compM.uniforms.k.value = k;
-    renderer.setRenderTarget(null); renderer.clear(); pass(compM, null);
-    renderer.clippingPlanes = cp;
-  };
-})();
 
 /* ============ OFFLINE (service worker) ============ */
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
@@ -1709,7 +1681,7 @@ function loop(now) {
   const dt = Math.min(.05, (now - lastT) / 1000); lastT = now; stepFades(dt);
   const pulse = .5 + .5 * Math.sin(now / 200); hlU.uA.value = (LIFT.mesh ? .45 : .75) + .45 * pulse;
   if (CU.open) { CU.ctl.update(); CU.r.render(CU.scene, CU.cam); return; }
-  luTick(now); liftTick(now, dt); luHover(); controls.update(); const bk = LIFT.mesh ? LIFT.k || 0 : 0; if (bk > .01) BLUR(bk); else renderer.render(scene, camera); if (LIFT.mesh) { const cp = renderer.clippingPlanes; renderer.clippingPlanes = []; renderer.autoClear = false; renderer.clearDepth(); renderer.render(liftScene, camera); renderer.autoClear = true; renderer.clippingPlanes = cp; } updateLabels(); luLabels(); updateLeader(now);
+  luTick(now); liftTick(now, dt); luHover(); controls.update(); renderer.render(scene, camera); if (LIFT.mesh) { const cp = renderer.clippingPlanes; renderer.clippingPlanes = []; renderer.autoClear = false; renderer.clearDepth(); renderer.render(liftScene, camera); renderer.autoClear = true; renderer.clippingPlanes = cp; } updateLabels(); luLabels(); updateLeader(now);
 }
 requestAnimationFrame(loop);
 window.__A = { ORG, ensureSys, scene, camera, controls, renderer, boxOf, flyToBox, refresh, state };
