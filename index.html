@@ -270,14 +270,14 @@ body.intro #loader{display:none!important}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 /* ===== move pad ===== */
 #stage{container-type:inline-size}
-#pad{position:absolute;left:14px;bottom:14px;z-index:4;display:grid;grid-template-columns:repeat(3,32px);grid-template-rows:repeat(3,32px);gap:3px;padding:6px;border-radius:16px}
-#pad button{border-radius:9px;color:#e5e5ea;display:grid;place-items:center;transition:background .15s,transform .15s var(--spring);touch-action:none}
+#pad{position:absolute;left:14px;bottom:12px;z-index:4;display:grid;grid-template-columns:repeat(3,42px);grid-template-rows:repeat(3,42px);gap:4px;padding:7px;border-radius:20px;transition:left .35s var(--ease),bottom .35s var(--ease)}
+#pad button{border-radius:12px;background:rgba(255,255,255,.045);color:#e5e5ea;display:grid;place-items:center;transition:background .15s,transform .15s var(--spring);touch-action:none}
 #pad button:hover{background:var(--fill2)}
 #pad button:active,#pad button.held{background:var(--accent);color:#fff;transform:scale(.92)}
-#pad svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-#pad .z{font-size:17px;font-weight:600;line-height:1}
+#pad svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+#pad .z{font-size:24px;font-weight:600;line-height:1}
 .chip .dot{--b:min(46px,calc((100cqw - 150px) / 12))}
-@media (max-width:900px){#pad{left:8px;bottom:84px;grid-template-columns:repeat(3,30px);grid-template-rows:repeat(3,30px);padding:5px}}
+@media (max-width:900px){#pad{grid-template-columns:repeat(3,38px);grid-template-rows:repeat(3,38px);padding:6px}}
 @keyframes panelIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes popIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
@@ -1672,6 +1672,16 @@ function nudge(kind, dt = 1 / 60) {
   }
 }
 function padLoop(now) { if (!padHold) return; const dt = Math.min(.05, (now - padHold.t) / 1000); padHold.t = now; nudge(padHold.kind, dt); requestAnimationFrame(padLoop); }
+
+// keep the move pad docked right beside the organ-system Dock
+const padEl = document.getElementById('pad'), dockEl = document.getElementById('systems');
+function syncPad() {
+  const st = stage.getBoundingClientRect(), d = dockEl.getBoundingClientRect(), pw = padEl.offsetWidth, gap = 10;
+  const dl = d.left - st.left, db = st.bottom - d.bottom;
+  if (dl - pw - gap >= 8) { padEl.style.left = (dl - pw - gap) + 'px'; padEl.style.bottom = db + 'px'; }
+  else { padEl.style.left = Math.max(8, dl) + 'px'; padEl.style.bottom = (st.bottom - d.top + gap) + 'px'; }
+}
+new ResizeObserver(syncPad).observe(dockEl); new ResizeObserver(syncPad).observe(stage); addEventListener('resize', syncPad); setTimeout(syncPad, 50);
 document.querySelectorAll('#pad button').forEach(b => {
   const kind = b.dataset.m || b.dataset.z;
   b.addEventListener('pointerdown', e => { e.preventDefault(); if (kind === 'center') { frameCurrent(); return; } b.classList.add('held'); padHold = { kind, t: performance.now() }; nudge(kind, .08); requestAnimationFrame(padLoop); });
